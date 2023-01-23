@@ -121,7 +121,20 @@ def copy_to_efs(datadir, partitions):
             shutil.copyfile(f"{datadir}/{partitions[ptype]['downloader'][i]}", f"{EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}")
             if ptype == "unmatched": continue
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")        
+            shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")  
+            
+def delete_s3(dataset, prefix, downloads_list):
+    """Delete DLC-created download lists from S3 bucket."""
+    
+    s3 = boto3.client("s3")
+    for txt_file in downloads_list:
+        try:
+            response = s3.delete_object(Bucket=f"{prefix}-download-lists",
+                                        Key=f"{dataset}/{txt_file}")
+            print(f"S3 file deleted: {dataset}/{txt_file}")      
+        except botocore.exceptions.ClientError as e:
+            raise e
+            
 
 def handle_error(error):
     """Print out error message and exit."""
@@ -199,6 +212,13 @@ def event_handler(event, context):
         #     print(json.dumps(job_ids,indent=2))
         # except botocore.exceptions.ClientError as e:
         #     handle_error(e)
+        
+        # Delete download text file lists from S3 bucket
+        try:
+            delete_s3(dataset, prefix, download_lists)
+        except botocore.exceptions.ClientError as e:
+            handle_error(e)
+        
     else:
         print(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
         sys.exit(0)
