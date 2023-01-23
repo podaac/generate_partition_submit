@@ -1,0 +1,4 @@
+__pycache__
+terraform/.terraform
+terraform/tfplan
+partition_submit_lambda/package
