@@ -87,7 +87,9 @@ def create_directories():
     # Processor
     processor = EFS_DIR.joinpath("processor")
     processor.joinpath("input").mkdir(parents=True, exist_ok=True)
-    processor.joinpath("logs").mkdir(parents=True, exist_ok=True)
+    processor.joinpath("logs", "error_logs").mkdir(parents=True, exist_ok=True)
+    processor.joinpath("logs", "processing_logs").mkdir(parents=True, exist_ok=True)
+    processor.joinpath("logs", "seatmp_manager").mkdir(parents=True, exist_ok=True)
     processor.joinpath("output", "MODIS_L2P_CORE_NETCDF").mkdir(parents=True, exist_ok=True)
     processor.joinpath("output", "VIIRS_L2P_CORE_NETCDF").mkdir(parents=True, exist_ok=True)
     processor.joinpath("scratch", "current_jobs").mkdir(parents=True, exist_ok=True)
@@ -189,9 +191,9 @@ def event_handler(event, context):
     # Partition
     try:
         partition = Partition(dataset, download_lists, datadir, prefix)
-        partition.num_lic_avail = 5
-        partitions = partition.partition_downloads(region, account, prefix)
+        partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         print(f"Number of licenses available: {partition.num_lic_avail}.")
+        print(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
         handle_error(e)
     
@@ -203,15 +205,16 @@ def event_handler(event, context):
         copy_to_efs(datadir, partitions)
         print("Coordinating files copied to EFS directories.")
         
-        # # Create and submit job arrays
-        # submit = Submit(config, dataset, datadir)
-        # job_list = submit.create_jobs(partitions, prefix)
-        # try:
-        #     job_ids = submit_jobs(job_list)
-        #     import json
-        #     print(json.dumps(job_ids,indent=2))
-        # except botocore.exceptions.ClientError as e:
-        #     handle_error(e)
+        # Create and submit job arrays
+        submit = Submit(config, dataset, datadir)
+        job_list = submit.create_jobs(partitions, prefix)
+        try:
+            job_ids = submit_jobs(job_list)
+            for job_id in job_ids:
+                print(f"Job executing: {job_id}")
+            # print(json.dumps(job_ids,indent=2))
+        except botocore.exceptions.ClientError as e:
+            handle_error(e)
         
         # Delete download text file lists from S3 bucket
         try:

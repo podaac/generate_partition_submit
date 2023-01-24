@@ -166,6 +166,17 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         ],
         "Resource" : "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/${var.prefix}*"
       },
+      {
+        "Sid" : "AllowBatchSubmitJob",
+        "Effect" : "Allow",
+        "Action" : [
+          "batch:SubmitJob"
+        ],
+        "Resource" : [
+          "arn:aws:batch:${var.aws_region}:${local.account_id}:job-definition/${var.prefix}*",
+          "arn:aws:batch:${var.aws_region}:${local.account_id}:job-queue/${var.prefix}*"
+        ]
+      }
     ]
   })
 }

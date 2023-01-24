@@ -62,6 +62,7 @@ class Submit:
             if ptype == "unmatched": continue    # Handle unmatched downloads later
             job_dict[ptype] = {}
             for component, json_list in component_dict.items():
+                if component == "downloader_txt": continue
                 job_dict[ptype][component] = []
                 config_data = self.config_data[f"{component}_{self.dataset}_{ptype}"]
                 for json_file in json_list:
@@ -76,7 +77,7 @@ class Submit:
         job_list = organize_jobs(job_dict, num_ql, num_r)
         
         # Add any unmatched downloads to the job list
-        job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
+        if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
 
         return job_list
     
@@ -159,12 +160,8 @@ def submit(job, job_id):
         Integer used to indicate if there are job dependencies
     """
     
-    import random
-    return random.randint(10,90)
-    
     # Boto3 session and client
-    session = boto3.session.Session(profile_name='saml-pub')
-    client = session.client('batch')
+    client = boto3.client('batch')
     
     # Dependencies
     if job_id == 0:
@@ -194,7 +191,7 @@ def submit(job, job_id):
                     ],
                     "command": job.command
                 },
-                arrayProperties = { "size": job.array_size },
+                arrayProperties = {} if job.array_size == 1 else { "size": job.array_size },
                 dependsOn = job_dependencies,
                 shareIdentifier = job.share_identifier,
                 schedulingPriorityOverride = job.scheduling_priority
@@ -202,6 +199,5 @@ def submit(job, job_id):
     except botocore.exceptions.ClientError as error:
         raise error
 
-    print(response["jobName"])
-    print(json.dumps(response, indent=2))
+    print(f"Job submitted: {response['jobName']}")
     return response["jobId"]   # Job identifier

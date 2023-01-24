@@ -117,7 +117,7 @@ class Partition:
                 self.update_queue(sqs, region, account, prefix)
             except botocore.exceptions.ClientError as e:
                 raise e
-            return {}
+            return {}, 0
         
         else:
             # Load, partition and write download lists
@@ -131,9 +131,9 @@ class Partition:
         
         # Write txt files and retrieve JSON data
         json_dict = {}
-        
+        final_total = 0
         if len(self.obpg_files["quicklook"]) != 0:
-            combiner_json, downloader_json, processor_json = self.write_txt_get_json(self.obpg_files["quicklook"], "quicklook")
+            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["quicklook"], "quicklook")
             combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_quicklook")
             downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_quicklook")
             processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_quicklook")
@@ -143,9 +143,10 @@ class Partition:
                 "processor": processor_json_lists,
                 "downloader_txt": downloader_json
             }
+            final_total += total_downloads
             
         if len(self.obpg_files["refined"]) != 0:
-            combiner_json, downloader_json, processor_json = self.write_txt_get_json(self.obpg_files["refined"], "refined")
+            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["refined"], "refined")
             combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_refined")
             downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_refined")
             processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_refined")
@@ -155,22 +156,25 @@ class Partition:
                 "processor": processor_json_lists,
                 "downloader_txt": downloader_json
             }
+            final_total += total_downloads
             
         if len(self.unmatched) != 0:
-            downloader_json = self.write_unmatched_json()
+            downloader_json, total_downloads = self.write_unmatched_json()
             downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_unmatched")
             json_dict["unmatched"] = {
                 "downloader": downloader_json_lists,
                 "downloader_txt": downloader_json
             }
-            
-        return json_dict
+            final_total += total_downloads
+        
+        return json_dict, total_downloads
     
     def write_unmatched_json(self):
         """Write download file lists and JSON for unmatched file downloads."""
         
         i = 0
         downloader_json = []
+        total_downloads = 0
         for job_array in self.unmatched:
             txt_files = []
             datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
@@ -178,10 +182,11 @@ class Partition:
             with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                 for job in job_array:
                     fh.write(f"{job}\n")
+                    total_downloads += 1
             txt_files.append(txt_file)
             i += 1
             downloader_json.append(txt_files)
-        return downloader_json
+        return downloader_json, total_downloads
             
     def write_json(self, component_json, filename):
         """Write JSON data for each job array in component JSON."""
@@ -203,6 +208,7 @@ class Partition:
         downloader_json = []
         combiner_json = []
         processor_json = []
+        total_downloads = 0
         for job_array in job_arrays:
             txt_files = []
             combiner_jobs = []
@@ -213,6 +219,7 @@ class Partition:
                 with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                     for job in jobs:
                         fh.write(f"{job}\n")
+                        total_downloads += 1
                 txt_files.append(txt_file)
                 i += 1
                 if ptype == "quicklook":
@@ -226,7 +233,7 @@ class Partition:
             downloader_json.append(txt_files)
             processor_json.append(processor_jobs)
             
-        return combiner_json, downloader_json, processor_json
+        return combiner_json, downloader_json, processor_json, total_downloads
             
     def chunk_downloads_job_array(self):
         """Sort and partition downloads.
