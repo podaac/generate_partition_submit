@@ -34,36 +34,6 @@ EFS_DIRS = {
     "processor": "/mnt/data/processor/input"
 }
 
-def get_args():
-    """Create and return argparser with arguments."""
-
-    arg_parser = argparse.ArgumentParser(description="Partition and submit AWS jobs")
-    arg_parser.add_argument("-d",
-                            "--datadir",
-                            type=str,
-                            help="Path to directory to store JSON and text files")
-    arg_parser.add_argument("-p",
-                            "--prefix",
-                            type=str,
-                            help="Prefix for all AWS infrastructure")
-    arg_parser.add_argument("-c",
-                            "--config",
-                            type=str,
-                            help="Path to job data configuration JSON file")
-    arg_parser.add_argument("-s",
-                            "--dataset",
-                            type=str,
-                            help="Name of dataset to produce AWS jobs for")
-    arg_parser.add_argument("-l",
-                            "--list",
-                            type=str,
-                            help="Name of download load list creator text file")
-    arg_parser.add_argument("-a",
-                            "--account",
-                            type=str,
-                            help="Identifier (integer) for AWS account")
-    return arg_parser
-
 def create_directories():
     """Creates EFS directories if they do not already exist.
     
@@ -166,27 +136,16 @@ def event_handler(event, context):
     """AWS Lambda event handler that kicks off partition of data and submits
     AWS Batch jobs."""
     
-    # Arguments - support local and AWS execution
-    if not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
-        arg_parser = get_args()
-        args = arg_parser.parse_args()
-        account = args.account
-        region = "us-west-2"
-        dataset = args.dataset
-        datadir = args.datadir
-        prefix = args.prefix
-        config = args.config
-        download_lists = args.list
-    else:
-        account = event["Records"][0]["eventSourceARN"].split(':')[4]
-        region = event["Records"][0]["awsRegion"]
-        body = event["Records"][0]["body"].replace("'", '"')
-        body = json.loads(body)
-        dataset = body["dataset"]
-        datadir = "/tmp"
-        prefix = body["prefix"]
-        config = "job_config.json"
-        download_lists = body["txt_list"]
+    # Arguments
+    account = event["Records"][0]["eventSourceARN"].split(':')[4]
+    region = event["Records"][0]["awsRegion"]
+    body = event["Records"][0]["body"].replace("'", '"')
+    body = json.loads(body)
+    dataset = body["dataset"]
+    datadir = "/tmp"
+    prefix = body["prefix"]
+    config = "job_config.json"
+    download_lists = body["txt_list"]
     
     # Partition
     try:
@@ -225,6 +184,3 @@ def event_handler(event, context):
     else:
         print(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
         sys.exit(0)
-                    
-# if __name__ == "__main__":
-#     event_handler(None, None)
