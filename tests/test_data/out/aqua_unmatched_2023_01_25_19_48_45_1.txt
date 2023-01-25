@@ -1,0 +1,3 @@
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230125T001001.L2.OC.NRT.nc 469ee2f2d0841974d7a324a8ef6bff24055a8650
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230125T000501.L2.SST4.NRT.nc 98d45c5e6267ca7e4a96c73ad2585e373fe0a273
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230125T000001.L2.SST4.NRT.nc bdca3f91c40a39379e21e3710deb4ca0f6af900a

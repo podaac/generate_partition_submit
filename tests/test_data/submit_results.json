@@ -1,0 +1,31 @@
+[
+    [
+        "podaac-sndbx-generate-aqua-quicklook-downloader-0",
+        "podaac-sndbx-generate-aqua-quicklook-combiner-0",
+        "podaac-sndbx-generate-aqua-quicklook-processor-0"
+    ],
+    [
+        "podaac-sndbx-generate-aqua-quicklook-downloader-1",
+        "podaac-sndbx-generate-aqua-quicklook-combiner-1",
+        "podaac-sndbx-generate-aqua-quicklook-processor-1"
+    ],
+    [
+        "podaac-sndbx-generate-aqua-quicklook-downloader-2",
+        "podaac-sndbx-generate-aqua-quicklook-combiner-2",
+        "podaac-sndbx-generate-aqua-quicklook-processor-2"
+    ],
+    [
+        "podaac-sndbx-generate-aqua-refined-downloader-0",
+        "podaac-sndbx-generate-aqua-refined-combiner-0",
+        "podaac-sndbx-generate-aqua-refined-processor-0"
+    ],
+    [
+        "podaac-sndbx-generate-aqua-refined-downloader-1",
+        "podaac-sndbx-generate-aqua-refined-combiner-1",
+        "podaac-sndbx-generate-aqua-refined-processor-1"
+    ],
+    [
+        "podaac-sndbx-generate-aqua-unmatched-downloader-0",
+        "podaac-sndbx-generate-aqua-unmatched-downloader-1"
+    ]
+]

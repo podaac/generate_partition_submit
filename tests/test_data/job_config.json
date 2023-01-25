@@ -1,0 +1,129 @@
+{
+    "downloader_aqua_quicklook" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateaquaquicklook",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "downloader_aqua_refined" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateaquarefined",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "combiner_aqua_quicklook" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generateaquaquicklook",
+        "command": [ "300", "0", "yes", "MODIS_A", "QUICKLOOK", "-235", "input_list" ]
+    },
+    "combiner_aqua_refined" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generateaquarefined",
+        "command": [ "300", "0", "yes", "MODIS_A", "REFINED", "-235", "input_list" ]
+    },
+    "processor_aqua_quicklook" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generateaquaquicklook",
+        "command": [ "300", "yes", "MODIS_A", "QUICKLOOK", "no", "-235", "input_list" ]
+    },
+    "processor_aqua_refined" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generateaquarefined",
+        "command": [ "300", "yes", "MODIS_A", "REFINED", "no", "-235", "input_list" ]
+    },
+    "downloader_terra_quicklook" : {
+        "queue": "generate-terra",
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateterraquicklook",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "downloader_terra_refined" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateterrarefined",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "combiner_terra_quicklook" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generateterraquicklook",
+        "command": [ "300", "0", "yes", "MODIS_T", "QUICKLOOK", "-235", "input_list" ]
+    },
+    "combiner_terra_refined" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generateterrarefined",
+        "command": [ "300", "0", "yes", "MODIS_T", "REFINED", "-235", "input_list" ]
+    },
+    "processor_terra_quicklook" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generateterraquicklook",
+        "command": [ "300", "yes", "MODIS_T", "QUICKLOOK", "no", "-235", "input_list" ]
+    },
+    "processor_terra_refined" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generateterrarefined",
+        "command": [ "300", "yes", "MODIS_T", "REFINED", "no", "-235", "input_list" ]
+    },
+    "downloader_viirs_quicklook" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateviirsquicklook",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "downloader_viirs_refined" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateviirsrefined",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "combiner_viirs_quicklook" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generateviirsquicklook",
+        "command": [ "300", "0", "yes", "VIIRS", "QUICKLOOK", "-235", "input_list" ]
+    },
+    "combiner_viirs_refined" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generateviirsrefined",
+        "command": [ "300", "0", "yes", "VIIRS", "REFINED", "-235", "input_list" ]
+    },
+    "processor_viirs_quicklook" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generateviirsquicklook",
+        "command": [ "300", "yes", "VIIRS", "QUICKLOOK", "no", "-235", "input_list" ]
+    },
+    "processor_viirs_refined" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generateviirsrefined",
+        "command": [ "300", "yes", "VIIRS", "REFINED", "no", "-235", "input_list" ]
+    },
+    "downloader_aqua_unmatched" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateaquaunmatched",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "AQUA", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "downloader_terra_unmatched" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateterraunmatched",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "TERRA", "/data/output", "2000", "1", "yes", "yes"]
+    },
+    "downloader_viirs_unmatched" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generateviirsunmatched",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "yes", "yes"]
+    }
+}
