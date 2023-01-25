@@ -13,7 +13,10 @@ import botocore
 import numpy as np
 
 # Local imports
-from job_array import JobArray
+try:
+    from job_array import JobArray
+except ModuleNotFoundError:
+    from partition_submit.job_array import JobArray
 
 class Submit:
     """Submit AWS Batch job arrays based on JSON files created from Partition.
@@ -87,6 +90,7 @@ class Submit:
         unmatched = []
         for component, json_files in job_array_dict["unmatched"].items():
             for json_file in json_files:
+                if component == "downloader_txt": continue
                 config_data = self.config_data[f"{component}_{self.dataset}_unmatched"]
                 unmatched.append(JobArray(self.dataset, 
                                         "unmatched", component, 
