@@ -1,0 +1,147 @@
+{
+    "quicklook": {
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T201500.L2.SST.NRT.nc 84c90ee600244a60621644251de8aed63290b89e": 
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T201500.L2.SST4.NRT.nc c1963924e101b5626948a97abd4fbadb7e1fc53d"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T202000.L2.SST.NRT.nc 994d29d99e31e552ed94f51d20ace4e1838426b4": 
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T202000.L2.SST4.NRT.nc b8dc40e2da614aea6b8e6531194f9a8678335f68"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T202500.L2.SST.NRT.nc d9268aed8a1c4f2b45a3add22f471182bf37d697":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T202500.L2.SST4.NRT.nc 65fa701548736f9b17c0b485e252d1933c6f4103"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T203001.L2.SST.NRT.nc 765178ec9905653ce52525fddf5714ba8b852fbf":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T203001.L2.SST4.NRT.nc 04a7bc3660ac0758177757b40fbb09f91031c7f2"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T203501.L2.SST.NRT.nc 197e5973cfdfd7c46e32add648e5c0484dfa6b7d": 
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T203501.L2.SST4.NRT.nc 5ab877798582bccd34ed9745acc4c49a5f3815eb"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T204001.L2.SST.NRT.nc 87bd471d574ab9f30838131d4c732a2ccb5404cd":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T204001.L2.SST4.NRT.nc 20f0f26517d0da4e2a6b70708c6b375acc19054b"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T204501.L2.SST.NRT.nc c052c20cb94a832f1d5a0f6206cd18d4e40907d2":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T204501.L2.SST4.NRT.nc 353c4d74210203a2d72da7aad1371b0e43b5382a"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T205001.L2.SST.NRT.nc f961157f8a5d095ceb95cc4dfb881a2aad615809":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T205001.L2.SST4.NRT.nc bc92f7aa73d4d0e1fc263b19f7f1a5ea2ca57383", 
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T205001.L2.OC.NRT.nc b78dd800e64aea113844ea9d5042be27831590e9"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T205501.L2.SST.NRT.nc 25a4810cee674e939b7b62dd892d0f63df63fb4d":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T205501.L2.SST4.NRT.nc 128a0b18909f6166c6b9af8b8d24cbb4d0e828f6", 
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T205501.L2.OC.NRT.nc 5bc078b342b10b3062b9f14dd76353c1a065e05e"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T210000.L2.SST.NRT.nc b0bd30febdea9e06cb39fc4f4eeafa9dc4fd9d78":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T210000.L2.OC.NRT.nc a46fec8de5101ef99f8c482f45d0deabc2e7cd43"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T210500.L2.SST.NRT.nc d3c731a974d87808f75c7cebc57d740f2fb8a6f0":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T210500.L2.OC.NRT.nc 416cf8cd534ab7084be02e1e8ac68993fb55a065"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T211000.L2.SST.NRT.nc 47398bb278715d0eb4f7bce1fcb4a9f553e47f04":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T211000.L2.OC.NRT.nc 94c0558b31bcd36ad4637f22e660f847ec01f149"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T211500.L2.SST.NRT.nc d0590ec78b9815fe691144ae244943cba13b5c27":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T211500.L2.OC.NRT.nc d3be466d288d51a7e7ddf53327234b9aae905491"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T212001.L2.SST.NRT.nc 2a875b0508664a858bee83e151170082b6c62ffc":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T212001.L2.OC.NRT.nc 8945d52d78f8a8c0d403c5cb0f3dee2227260a23"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T212501.L2.SST.NRT.nc 9626028d04618cce156b85e39718dcef789eb541":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T212501.L2.OC.NRT.nc 6b391250b4298dbb7ce10d89b486a9d86b06f36e"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T213001.L2.SST.NRT.nc 0259120624c79f97b241bd0127823b73ae93917b":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T213001.L2.OC.NRT.nc 1141ff487822f235d03700dc65da029cb426ccf5"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T213501.L2.SST.NRT.nc 78bbd3bc25c7cb363582b37f170bf87c8093abf3":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20230124T213501.L2.OC.NRT.nc cd369957271b05a80a10a88d34cb2c7898eb3593"
+        }
+    },
+    "refined": {
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T000001.L2.SST.nc 051fe2747f58993c635b4f33ab0ba05ea7258ef4":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T000001.L2.OC.nc 7d666a60793ebe929e02bcb917e57930c6090b55"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T000501.L2.SST.nc ce82ee5579c19322057cd98faff5da2d22afa01f":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T000501.L2.OC.nc 0028d0bb240c29bb6caf989fe5d5d547742f8827"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T001001.L2.SST.nc fdf5207e497d236983949f24e3ce4d8c354b4a57":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T001001.L2.SST4.nc d79c69ff58e5daae01d00e8641ec78f87725c7e4", 
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T001001.L2.OC.nc e347386adfd46832eda3e20a815a1867ffe470a3"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T001501.L2.SST.nc b6ed0ff7325e460454044e907d1191b4393dc4d3":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T001501.L2.SST4.nc faef6b2e0ae6a935df8a253a8e46576dc42747ed"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002001.L2.SST.nc 247a729293027885ce4494d4a3ca8617f9ec1099":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002001.L2.SST4.nc 68dd08200d1ffb4f72f23e74b219d235516e0c1c"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002501.L2.SST.nc 165ccc2084a82ed2b1fb9895078857f2d54e5f96":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002501.L2.SST4.nc 8c21a5dabc97ae6328ce9e9f69ccee81a331b1f6"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003001.L2.SST.nc 492e7cd776315dd4634170c67333e0a6a648ffbb":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003001.L2.SST4.nc ba48acb6136abe21f740a20cbfe7adbdb3ae4223"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003500.L2.SST.nc bf42ee044bc56f150dab64499ba2c87157d2ac5d":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003500.L2.SST4.nc b2b66a43028deca252704b6ece85f26d93b058ca"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T004000.L2.SST.nc c53ced3528a91043ab12478ac787419163953442":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T004000.L2.SST4.nc 3039e639222c28f3ccca6b906a42827981fb2abc"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T004500.L2.SST.nc 426e4234600060c38e616f9f0b852348c75e6daf":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T004500.L2.SST4.nc a99d0dea848f297cb70fd3d17991bd05404af7dd"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T005001.L2.SST.nc c939b4a02c5a69a888e896b10d5517229c8d059f":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T005001.L2.SST4.nc ffb206bbf77fa6aca319ea3be1522626e007e675"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T005501.L2.SST.nc 513cb186f30f04298af4ef5240f80be9bcb17de3":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T005501.L2.SST4.nc dc86d74608cb8976bf0f868edf33ef98a9b9cbdb", 
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T005501.L2.OC.nc 3b0e3c1956587a810e440915defdaae6c3e70c20"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T010001.L2.SST.nc 878682b1b606b4e0dc0998029334cae42d078c82":
+        {
+            "sst34_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T010001.L2.SST4.nc 0b5eaa844e1b7a6b02992c68b9d7b799e55bfaa0", 
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T010001.L2.OC.nc e859bef27da31b9cb0f8243b8950360bb2e12623"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T010501.L2.SST.nc 21d4ffc9c86ce12969974c50f05f12e2797c4b0f":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T010501.L2.OC.nc 503d99618a8e15b8f216ce2173c80e70f5638afb"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T011001.L2.SST.nc 57d078e1070174c7c9733c444fab96154dd14dd4":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T011001.L2.OC.nc 1e38548e49b1bfcfa0eb7b40b6e21a1589fd9e50"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T011501.L2.SST.nc 4246e31b885d5af22881c4babe03cd41d5665b8a":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T011501.L2.OC.nc 48aa2cb5ccd4cfff27b09e369c4535cc1b075ce3"
+        },
+        "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T012001.L2.SST.nc c040710d4c3269b5887cbc6c2d3a3457726af728":
+        {
+            "oc_file": "https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T012001.L2.OC.nc 6a58b1c9d925e8207d4568189526f67f0d57b26d"
+        }
+    }
+}
