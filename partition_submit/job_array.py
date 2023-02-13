@@ -53,6 +53,17 @@ class JobArray():
             self.command = list(map(lambda x: x.replace("-235", "0"), self.command))
         self.job_name = f"{self.queue}-{self.processing_type}-{self.component}-{self.counter}"
         
+    def update_uploader_command(self, prefix, unique_id, last_job_index):
+        """Update uploader command with method parameters."""
+        
+        self.command = list(map(lambda x: x.replace("unique_id", str(unique_id)), self.command))
+        self.command = list(map(lambda x: x.replace("prefix", prefix), self.command))
+        if self.array_size > 1:
+            if self.processing_type == "quicklook":
+                self.command = list(map(lambda x: x.replace("-1", str(last_job_index["quicklook"])), self.command))
+            else:
+                self.command = list(map(lambda x: x.replace("-1", str(last_job_index["refined"])), self.command))
+        
 def get_array_size(input_list):
     """Determines array size from contents of input list file.
     

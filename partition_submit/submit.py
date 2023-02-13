@@ -46,7 +46,7 @@ class Submit:
         self.data_dir = data_dir
         self.job_array_list = []
                        
-    def create_jobs(self, job_array_dict, prefix):
+    def create_jobs(self, job_array_dict, prefix, unique_id, last_job_index):
         """Create AWS Batch job arrays.
         
         Attributes
@@ -55,6 +55,10 @@ class Submit:
             Dictionary of input JSON data files
         prefix: str
             String prefix for AWS infrastructure
+        unique_id: integer
+            Unique identifier for workflow
+        last_job_index: integer
+            Last index of AWS Batch job
         """
         
         # Create jobs
@@ -69,11 +73,13 @@ class Submit:
                 job_dict[ptype][component] = []
                 config_data = self.config_data[f"{component}_{self.dataset}_{ptype}"]
                 for json_file in json_list:
-                    job_dict[ptype][component].append(JobArray(self.dataset, 
-                                                      ptype, component, 
-                                                      json_file, config_data, 
-                                                      self.data_dir,
-                                                      prefix))
+                    job = JobArray(self.dataset, 
+                                   ptype, component, 
+                                   json_file, config_data, 
+                                   self.data_dir,
+                                   prefix)
+                    if component == "uploader": job.update_uploader_command(prefix, unique_id, last_job_index)
+                    job_dict[ptype][component].append(job)
                     if ptype == "quicklook": num_ql +=1
                     if ptype == "refined": num_r += 1           
         # Organize jobs
@@ -113,8 +119,8 @@ def organize_jobs(job_dict, num_ql, num_r):
         Dictionary of JobArray objects
     """
     
-    quicklook = np.empty(shape=((num_ql//3), 3), dtype=object)
-    refined = np.empty(shape=((num_r//3), 3), dtype=object)
+    quicklook = np.empty(shape=((num_ql//4), 4), dtype=object)
+    refined = np.empty(shape=((num_r//4), 4), dtype=object)
     for ptype, components in job_dict.items():
             for component, job_list in components.items():
                 for job in job_list:
@@ -123,10 +129,12 @@ def organize_jobs(job_dict, num_ql, num_r):
                         if component == "downloader": quicklook[j,0] = job 
                         if component == "combiner": quicklook[j,1] = job 
                         if component == "processor": quicklook[j,2] = job 
+                        if component == "uploader": quicklook[j,3] = job
                     if ptype == "refined":
                         if component == "downloader": refined[j,0] = job 
                         if component == "combiner": refined[j,1] = job 
                         if component == "processor": refined[j,2] = job 
+                        if component == "uploader": refined[j,3] = job
     
     return quicklook.tolist() + refined.tolist()
 

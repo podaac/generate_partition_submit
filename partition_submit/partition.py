@@ -112,7 +112,7 @@ class Partition:
         sqs = boto3.client("sqs")
         
         # Check the number of available licenses
-        if self.num_lic_avail <= 2:   # One license per processing type
+        if self.num_lic_avail < 2:   # One license per processing type
             try:
                 self.update_queue(sqs, region, account, prefix)
             except botocore.exceptions.ClientError as e:
@@ -141,6 +141,7 @@ class Partition:
                 "combiner": combiner_json_lists,
                 "downloader": downloader_json_lists,
                 "processor": processor_json_lists,
+                "uploader": processor_json_lists,
                 "downloader_txt": downloader_json
             }
             final_total += total_downloads
@@ -154,6 +155,7 @@ class Partition:
                 "combiner": combiner_json_lists,
                 "downloader": downloader_json_lists,
                 "processor": processor_json_lists,
+                "uploader": processor_json_lists,
                 "downloader_txt": downloader_json
             }
             final_total += total_downloads

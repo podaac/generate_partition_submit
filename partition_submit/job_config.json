@@ -35,6 +35,18 @@
         "share_identifier": "generateaquarefined",
         "command": [ "300", "yes", "MODIS_A", "REFINED", "no", "-235", "input_list" ]
     },
+    "uploader_aqua_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateaquaquicklook",
+        "command": [ "unique_id", "prefix", "-235", "-1", "input_list", "/data", "quicklook", "aqua" ]
+    },
+    "uploader_aqua_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateaquarefined",
+        "command": [ "unique_id", "prefix", "-235", "-1", "input_list", "/data", "refined", "aqua" ]
+    },
     "downloader_terra_quicklook" : {
         "queue": "generate-terra",
         "cpu": "5",
@@ -72,6 +84,18 @@
         "share_identifier": "generateterrarefined",
         "command": [ "300", "yes", "MODIS_T", "REFINED", "no", "-235", "input_list" ]
     },
+    "uploader_terra_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateterraquicklook",
+        "command": [ "unique_id", "prefix", "-235", "-1", "input_list", "/data", "quicklook", "terra" ]
+    },
+    "uploader_terra_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateterrarefined",
+        "command": [ "unique_id", "prefix", "-235", "-1", "input_list", "/data", "refined", "terra" ]
+    },
     "downloader_viirs_quicklook" : {
         "cpu": "5",
         "memory": "500",
@@ -107,6 +131,18 @@
         "memory": "1000",
         "share_identifier": "generateviirsrefined",
         "command": [ "300", "yes", "VIIRS", "REFINED", "no", "-235", "input_list" ]
+    },
+    "uploader_viirs_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateviirsquicklook",
+        "command": [ "unique_id", "prefix", "-235", "-1", "input_list", "/data", "quicklook", "viirs" ]
+    },
+    "uploader_viirs_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateviirsrefined",
+        "command": [ "unique_id", "prefix", "-235", "-1", "input_list", "/data", "refined", "viirs" ]
     },
     "downloader_aqua_unmatched" : {
         "cpu": "5",

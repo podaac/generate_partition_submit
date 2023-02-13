@@ -116,21 +116,32 @@ def handle_error(error):
     print("System exiting.")
     sys.exit(1)
     
-def print_jobs(partitions):
-    """Print the number of jobs per component and processing type."""
+def print_jobs_get_index(partitions):
+    """Print the number of jobs per component and processing type and return last
+    job index for quicklook and refined jobs."""
     
+    last_job_index = {
+        "quicklook": 0,
+        "refined": 0
+    }
     if "quicklook" in partitions.keys():
         print(f"Number of quicklook downloader jobs: {len(partitions['quicklook']['downloader'])}")
         print(f"Number of quicklook combiner jobs: {len(partitions['quicklook']['combiner'])}")
         print(f"Number of quicklook processor jobs: {len(partitions['quicklook']['processor'])}")
+        print(f"Number of quicklook uploader jobs: {len(partitions['quicklook']['uploader'])}")
+        last_job_index["quicklook"] += len(partitions['quicklook']['uploader']) - 1
         
     if "refined" in partitions.keys():
         print(f"Number of refined downloader jobs: {len(partitions['refined']['downloader'])}")
         print(f"Number of refined combiner jobs: {len(partitions['refined']['combiner'])}")
         print(f"Number of refined processor jobs: {len(partitions['refined']['processor'])}")
+        print(f"Number of refined uploader jobs: {len(partitions['refined']['uploader'])}")
+        last_job_index["refined"] += len(partitions['refined']['uploader']) - 1
     
     if "unmatched" in partitions.keys():
         print(f"Number of unmatched downloader jobs: {len(partitions['unmatched']['downloader'])}")
+        
+    return last_job_index
 
 def event_handler(event, context):
     """AWS Lambda event handler that kicks off partition of data and submits
@@ -158,7 +169,9 @@ def event_handler(event, context):
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
-        print_jobs(partitions)
+        last_job_index = print_jobs_get_index(partitions)
+        print(f"Last quicklook job index: {last_job_index['quicklook']}")    
+        print(f"Last refined job index: {last_job_index['refined']}")
         
         # Copy S3 text files and /tmp JSON files to EFS
         copy_to_efs(datadir, partitions)
@@ -166,7 +179,7 @@ def event_handler(event, context):
         
         # Create and submit job arrays
         submit = Submit(config, dataset, datadir)
-        job_list = submit.create_jobs(partitions, prefix)
+        job_list = submit.create_jobs(partitions, prefix, partition.unique_id, last_job_index)
         try:
             job_ids = submit_jobs(job_list)
             for job_id in job_ids:
