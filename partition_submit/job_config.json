@@ -148,13 +148,13 @@
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateaquaunmatched",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "AQUA", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "yes", "yes"]
     },
     "downloader_terra_unmatched" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateterraunmatched",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "TERRA", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "yes", "yes"]
     },
     "downloader_viirs_unmatched" : {
         "cpu": "5",
