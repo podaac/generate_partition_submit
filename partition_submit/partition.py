@@ -180,7 +180,7 @@ class Partition:
         for job_array in self.unmatched:
             txt_files = []
             datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
-            txt_file = f"{self.dataset}_unmatched_{datetime_str}_{i}.txt"
+            txt_file = f"{self.dataset}_unmatched_{datetime_str}_{i}_{self.unique_id}.txt"
             with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                 for job in job_array:
                     fh.write(f"{job}\n")
@@ -196,8 +196,8 @@ class Partition:
         i = 0
         filename_list = []
         for json_data in component_json:
-            filename_list.append(f"{filename}_{i}.json")
-            with open(self.out_dir.joinpath(f"{filename}_{i}.json"), 'w') as jf:
+            filename_list.append(f"{filename}_{i}_{self.unique_id}.json")
+            with open(self.out_dir.joinpath(f"{filename}_{i}_{self.unique_id}.json"), 'w') as jf:
                 json.dump(json_data, jf, indent=2)
             i += 1
         return filename_list     
@@ -217,7 +217,7 @@ class Partition:
             processor_jobs = []
             for jobs in job_array:
                 datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
-                txt_file = f"{self.dataset}_{datetime_str}_{i}.txt" if not ptype else f"{self.dataset}_{ptype}_{datetime_str}_{i}.txt"
+                txt_file = f"{self.dataset}_{datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{datetime_str}_{i}_{self.unique_id}.txt"
                 with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                     for job in jobs:
                         fh.write(f"{job}\n")
