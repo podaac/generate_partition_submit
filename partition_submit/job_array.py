@@ -46,7 +46,7 @@ class JobArray():
         self.memory = config_data["memory"]
         self.scheduling_priority = 10 if processing_type == "quicklook" else 1
         self.share_identifier = config_data["share_identifier"]
-        self.counter = input_list.split('.')[0].split('_')[-1]
+        self.counter = input_list.split('.')[0].split('_')[-2]
         self.array_size = get_array_size(Path(data_dir).joinpath(input_list))
         self.command = list(map(lambda x: x.replace("input_list", input_list), config_data["command"]))
         if self.array_size == 1: 
