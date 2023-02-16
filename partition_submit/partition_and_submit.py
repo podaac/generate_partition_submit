@@ -89,7 +89,7 @@ def copy_to_efs(datadir, partitions):
             shutil.copyfile(f"{datadir}/{txt}", f"{EFS_DIRS['downloader']}/{txt}")
     
         # Copy JSON files to appropriate directories 
-        for i in range(len(partitions[ptype]["combiner"])):
+        for i in range(len(partitions[ptype]["downloader"])):
             shutil.copyfile(f"{datadir}/{partitions[ptype]['downloader'][i]}", f"{EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}")
             if ptype == "unmatched": continue
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
@@ -162,6 +162,7 @@ def event_handler(event, context):
     try:
         partition = Partition(dataset, download_lists, datadir, prefix)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
+        print(f"Unique idenitifier: {partition.unique_id}")
         print(f"Number of licenses available: {partition.num_lic_avail}.")
         print(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
@@ -196,4 +197,3 @@ def event_handler(event, context):
         
     else:
         print(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
-        sys.exit(0)
