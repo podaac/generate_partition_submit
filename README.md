@@ -28,12 +28,13 @@ VIIRS:
 
 **NOTES**
 - In order for the commands to execute the `/?/` directories will need to point to actual directories on the system.
+- The job config file is hosted in an AWS S3 Bucket that the component loads into memory to create and submit AWS Batch jobs.
 
 ## aws infrastructure
 
 The partition and submit component includes the following AWS services:
 - AWS Lambda function.
-- AWS S3 bucket to hold input text files.
+- AWS S3 bucket to hold input text files and job config file.
 - AWS SQS queue to allow the publication of the list of text files.
 - AWS SQS queue to track pending AWS jobs from previous runs.
 - AWS SSM parameters to track the number of available IDL licenses.

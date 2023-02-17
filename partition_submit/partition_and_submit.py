@@ -21,6 +21,7 @@ import sys
 # Third-party imports
 import boto3
 import botocore
+import fsspec
 
 # Local imports
 from partition import Partition
@@ -143,6 +144,14 @@ def print_jobs_get_index(partitions):
         
     return last_job_index
 
+def read_config(prefix):
+    """Read in JSON config file for AWS Batch job submission."""
+    
+    s3_url = f"s3://{prefix}-download-lists/config/job_config.json"
+    with fsspec.open(s3_url, mode='r') as fh:
+        job_config = json.load(fh)
+    return job_config
+
 def event_handler(event, context):
     """AWS Lambda event handler that kicks off partition of data and submits
     AWS Batch jobs."""
@@ -155,7 +164,7 @@ def event_handler(event, context):
     dataset = body["dataset"]
     datadir = "/tmp"
     prefix = body["prefix"]
-    config = "job_config.json"
+    config = read_config(prefix)
     download_lists = body["txt_list"]
     
     # Partition

@@ -28,20 +28,19 @@ class Submit:
     -------
     """
     
-    def __init__(self, config_file, dataset, data_dir):
+    def __init__(self, config_data, dataset, data_dir):
         """
         Attributes
         ----------
-        config_file: str
-            String path to job configuration file
+        config_file: dict
+            Dictionary of AWS Batch job configuration details
         dataset: str
             String name of dataset to submit jobs under
         data_dir: str
             String path location of JSON data files
         """
         
-        with open(config_file) as jf:
-            self.config_data = json.load(jf)
+        self.config_data = config_data
         self.dataset = dataset
         self.data_dir = data_dir
         self.job_array_list = []
