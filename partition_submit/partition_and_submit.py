@@ -161,7 +161,6 @@ def event_handler(event, context):
     # Partition
     try:
         partition = Partition(dataset, download_lists, datadir, prefix)
-        partition.num_lic_avail = 5
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         print(f"Unique idenitifier: {partition.unique_id}")
         print(f"Number of licenses available: {partition.num_lic_avail}.")
