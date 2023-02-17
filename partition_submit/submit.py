@@ -45,7 +45,7 @@ class Submit:
         self.data_dir = data_dir
         self.job_array_list = []
                        
-    def create_jobs(self, job_array_dict, prefix, unique_id, last_job_index):
+    def create_jobs(self, job_array_dict, prefix, unique_id):
         """Create AWS Batch job arrays.
         
         Attributes
@@ -56,11 +56,9 @@ class Submit:
             String prefix for AWS infrastructure
         unique_id: integer
             Unique identifier for workflow
-        last_job_index: integer
-            Last index of AWS Batch job
         """
         
-        # Create jobs
+        # Create component jobs
         job_dict = {}
         num_ql = 0
         num_r = 0
@@ -77,12 +75,20 @@ class Submit:
                                    json_file, config_data, 
                                    self.data_dir,
                                    prefix)
-                    if component == "uploader": job.update_uploader_command(prefix, unique_id, last_job_index)
+                    if component == "uploader": job.update_command_prefix(prefix)
                     job_dict[ptype][component].append(job)
                     if ptype == "quicklook": num_ql +=1
-                    if ptype == "refined": num_r += 1           
+                    if ptype == "refined": num_r += 1
+                    
+        # Create license job
+        license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
+                               self.config_data[f"license_returner_{self.dataset}"], 
+                               None, prefix)
+        license_job.update_command_prefix(prefix)
+        license_job.update_command_uid(str(unique_id))
+                 
         # Organize jobs
-        job_list = organize_jobs(job_dict, num_ql, num_r)
+        job_list = organize_jobs(job_dict, num_ql, num_r, license_job)
         
         # Add any unmatched downloads to the job list
         if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
@@ -104,7 +110,7 @@ class Submit:
                                         prefix))
         return unmatched
                     
-def organize_jobs(job_dict, num_ql, num_r):
+def organize_jobs(job_dict, num_ql, num_r, license_job):
     """Organize JobArray jobs in job list by component and counter.
     
     Returns a list of lists with each sublist representative of a Generate
@@ -116,6 +122,12 @@ def organize_jobs(job_dict, num_ql, num_r):
     --------
     job_dict: dict
         Dictionary of JobArray objects
+    num_ql: int
+        Number of quicklook jobs
+    num_r: int
+        Number of refined jobs
+    license_job: JobArray
+        license_returner JobArray object
     """
     
     quicklook = np.empty(shape=((num_ql//4), 4), dtype=object)
@@ -135,7 +147,9 @@ def organize_jobs(job_dict, num_ql, num_r):
                         if component == "processor": refined[j,2] = job 
                         if component == "uploader": refined[j,3] = job
     
-    return quicklook.tolist() + refined.tolist()
+    job_list = quicklook.tolist() + refined.tolist()
+    job_list[-1].append(license_job)    # Add license job
+    return job_list
 
 def submit_jobs(job_list):
     """Submit jobs to AWS Batch.
@@ -170,6 +184,9 @@ def submit(job, job_id):
     index: int
         Integer used to indicate if there are job dependencies
     """
+    
+    import random
+    return random.randint(100,500)
     
     # Boto3 session and client
     client = boto3.client('batch')
