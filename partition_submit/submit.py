@@ -185,9 +185,6 @@ def submit(job, job_id):
         Integer used to indicate if there are job dependencies
     """
     
-    import random
-    return random.randint(100,500)
-    
     # Boto3 session and client
     client = boto3.client('batch')
     
