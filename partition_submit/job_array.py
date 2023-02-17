@@ -50,7 +50,7 @@ class JobArray():
             self.counter = 0
             self.array_size = 1
             self.command = config_data["command"]
-            self.job_name = f"{self.queue}-{self.processing_type}-{self.counter}"
+            self.job_name = f"{self.queue}-{self.processing_type}"
         else:
             self.counter = input_list.split('.')[0].split('_')[-2]
             self.array_size = get_array_size(Path(data_dir).joinpath(input_list))
