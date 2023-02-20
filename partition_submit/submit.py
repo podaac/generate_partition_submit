@@ -132,6 +132,13 @@ class Submit:
                 except botocore.exceptions.ClientError as error:
                     raise error
             dataset_job_ids.append(job_ids)
+        
+        # Submit license jobs with dependencies on processor jobs
+        p_job_ids = []
+        for i in range(len(dataset_job_ids) - 1):   # Exclude unmatched downloads
+            p_job_ids.append(dataset_job_ids[i][2])
+        dataset_job_ids.append([submit(self.license_job, p_job_ids)])
+        
         return dataset_job_ids
                     
 def organize_jobs(job_dict, num_ql, num_r):
@@ -183,15 +190,16 @@ def submit(job, job_id):
         Integer used to indicate if there are job dependencies
     """
     
-    import random
-    return random.randint(10, 99)
-    
     # Boto3 session and client
     client = boto3.client('batch')
     
     # Dependencies
     if job_id == 0:
         job_dependencies = []    # Parallel downloader
+    elif isinstance(job_id, list):
+        job_dependencies = []
+        for job in job_id:
+            job_dependencies.append({"jobId": job})   # License job
     else:
         job_dependencies = [
             { "jobId": job_id, "type": "N_TO_N" },

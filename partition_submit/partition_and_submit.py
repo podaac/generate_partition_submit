@@ -25,7 +25,7 @@ import fsspec
 
 # Local imports
 from partition import Partition
-from submit import Submit, submit_jobs
+from submit import Submit
 
 # Constants
 EFS_DIR = pathlib.Path("/mnt/data")
@@ -180,7 +180,7 @@ def event_handler(event, context):
         submit = Submit(config, dataset, datadir)
         job_list = submit.create_jobs(partitions, prefix, partition.unique_id)
         try:
-            job_ids = submit_jobs(job_list)
+            job_ids = submit.submit_jobs(job_list)
             for job_id in job_ids:
                 print(f"Job executing: {job_id}")
             # print(json.dumps(job_ids,indent=2))
