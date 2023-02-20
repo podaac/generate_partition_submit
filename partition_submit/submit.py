@@ -198,8 +198,8 @@ def submit(job, job_id):
         job_dependencies = []    # Parallel downloader
     elif isinstance(job_id, list):
         job_dependencies = []
-        for job in job_id:
-            job_dependencies.append({"jobId": job})   # License job
+        for jid in job_id:
+            job_dependencies.append({"jobId": jid})   # License job
     else:
         job_dependencies = [
             { "jobId": job_id, "type": "N_TO_N" },
