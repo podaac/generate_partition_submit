@@ -254,11 +254,13 @@ class Partition:
             ql = 0
             r = self.num_lic_avail
             chunked_r_keys = np.array_split(r_sst_keys, r)
+            chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_r_keys:
                 self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
         elif len(r_sst_keys) == 0:
             ql = self.num_lic_avail
             chunked_ql_keys = np.array_split(ql_sst_keys, ql)
+            chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_ql_keys:
                 self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
             r = 0
@@ -266,9 +268,11 @@ class Partition:
             ql = (self.num_lic_avail) // 2 + (self.num_lic_avail % 2)
             r = self.num_lic_avail // 2
             chunked_ql_keys = np.array_split(ql_sst_keys, ql)
+            chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_ql_keys:
                 self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
             chunked_r_keys = np.array_split(r_sst_keys, r)
+            chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_r_keys:
                 self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
                   
