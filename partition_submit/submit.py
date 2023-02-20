@@ -30,7 +30,7 @@ class Submit:
     
     def __init__(self, config_data, dataset, data_dir):
         """
-        Attributes
+        Arguments
         ----------
         config_file: dict
             Dictionary of AWS Batch job configuration details
@@ -44,6 +44,7 @@ class Submit:
         self.dataset = dataset
         self.data_dir = data_dir
         self.job_array_list = []
+        self.license_job = None
                        
     def create_jobs(self, job_array_dict, prefix, unique_id):
         """Create AWS Batch job arrays.
@@ -79,19 +80,19 @@ class Submit:
                     job_dict[ptype][component].append(job)
                     if ptype == "quicklook": num_ql +=1
                     if ptype == "refined": num_r += 1
-                    
-        # Create license job
-        license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
-                               self.config_data[f"license_returner_{self.dataset}"], 
-                               None, prefix)
-        license_job.update_command_prefix(prefix)
-        license_job.update_command_uid(str(unique_id))
                  
         # Organize jobs
-        job_list = organize_jobs(job_dict, num_ql, num_r, license_job)
+        job_list = organize_jobs(job_dict, num_ql, num_r)
         
         # Add any unmatched downloads to the job list
         if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
+        
+        # Create license job
+        self.license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
+                               self.config_data[f"license_returner_{self.dataset}"], 
+                               None, prefix)
+        self.license_job.update_command_prefix(prefix)
+        self.license_job.update_command_uid(str(unique_id))
 
         return job_list
     
@@ -109,8 +110,31 @@ class Submit:
                                         self.data_dir,
                                         prefix))
         return unmatched
+    
+    def submit_jobs(self, job_list):
+        """Submit jobs to AWS Batch.
+        
+        Parameters
+        ----------
+        job_list: list
+            list of lists with each sublist a Generate workflow
+        """
+        
+        dataset_job_ids = []
+        for jobs in job_list:
+            job_ids = []
+            for job in jobs:
+                try:
+                    if len(job_ids) == 0:
+                        job_ids.append(submit(job, 0))
+                    else:
+                        job_ids.append(submit(job, job_ids[-1]))
+                except botocore.exceptions.ClientError as error:
+                    raise error
+            dataset_job_ids.append(job_ids)
+        return dataset_job_ids
                     
-def organize_jobs(job_dict, num_ql, num_r, license_job):
+def organize_jobs(job_dict, num_ql, num_r):
     """Organize JobArray jobs in job list by component and counter.
     
     Returns a list of lists with each sublist representative of a Generate
@@ -126,8 +150,6 @@ def organize_jobs(job_dict, num_ql, num_r, license_job):
         Number of quicklook jobs
     num_r: int
         Number of refined jobs
-    license_job: JobArray
-        license_returner JobArray object
     """
     
     quicklook = np.empty(shape=((num_ql//4), 4), dtype=object)
@@ -148,31 +170,7 @@ def organize_jobs(job_dict, num_ql, num_r, license_job):
                         if component == "uploader": refined[j,3] = job
     
     job_list = quicklook.tolist() + refined.tolist()
-    job_list[-1].append(license_job)    # Add license job
     return job_list
-
-def submit_jobs(job_list):
-    """Submit jobs to AWS Batch.
-    
-    Parameters
-    ----------
-    job_list: list
-        list of lists with each sublist a Generate workflow
-    """
-    
-    dataset_job_ids = []
-    for jobs in job_list:
-        job_ids = []
-        for job in jobs:
-            try:
-                if len(job_ids) == 0:
-                    job_ids.append(submit(job, 0))
-                else:
-                    job_ids.append(submit(job, job_ids[-1]))
-            except botocore.exceptions.ClientError as error:
-                raise error
-        dataset_job_ids.append(job_ids)
-    return dataset_job_ids
             
 def submit(job, job_id):
     """Submit job to AWS Batch.
@@ -184,6 +182,9 @@ def submit(job, job_id):
     index: int
         Integer used to indicate if there are job dependencies
     """
+    
+    import random
+    return random.randint(10, 99)
     
     # Boto3 session and client
     client = boto3.client('batch')
