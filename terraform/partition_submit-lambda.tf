@@ -151,11 +151,9 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Sid" : "AllowSQSAccessPJ",
         "Effect" : "Allow",
         "Action" : [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
           "sqs:SendMessage"
         ],
-        "Resource" : "${aws_sqs_queue.aws_sqs_queue_pending_jobs.arn}"
+        "Resource" : "${data.aws_sqs_queue.pending_jobs.arn}"
       },
       {
         "Sid" : "AllowSSMGetPut",
@@ -176,34 +174,6 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
           "arn:aws:batch:${var.aws_region}:${local.account_id}:job-definition/${var.prefix}*",
           "arn:aws:batch:${var.aws_region}:${local.account_id}:job-queue/${var.prefix}*"
         ]
-      }
-    ]
-  })
-}
-
-# SQS Queue
-resource "aws_sqs_queue" "aws_sqs_queue_pending_jobs" {
-  name                       = "${var.prefix}-pending-jobs"
-  visibility_timeout_seconds = 300
-  sqs_managed_sse_enabled    = true
-}
-
-resource "aws_sqs_queue_policy" "aws_sqs_queue_policy_pending_jobs" {
-  queue_url = aws_sqs_queue.aws_sqs_queue_pending_jobs.id
-  policy = jsonencode({
-    "Version" : "2008-10-17",
-    "Id" : "__default_policy_ID",
-    "Statement" : [
-      {
-        "Sid" : "__owner_statement",
-        "Effect" : "Allow",
-        "Principal" : {
-          "AWS" : "${local.account_id}"
-        },
-        "Action" : [
-          "SQS:*"
-        ],
-        "Resource" : "${aws_sqs_queue.aws_sqs_queue_pending_jobs.arn}"
       }
     ]
   })

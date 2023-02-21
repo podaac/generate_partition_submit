@@ -56,6 +56,10 @@ data "aws_sqs_queue" "download_lists" {
   name = "${var.prefix}-download-lists"
 }
 
+data "aws_sqs_queue" "pending_jobs" {
+  name = "${var.prefix}-pending-jobs"
+}
+
 data "aws_subnet" "private_application_subnet" {
   for_each = toset(data.aws_subnets.private_application_subnets.ids)
   id       = each.value
