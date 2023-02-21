@@ -308,9 +308,6 @@ class Partition:
     def load_downloads(self, sqs, region, account, prefix):
         """Load downloads and group by SST file."""
         
-        # Load previous download lists
-        self.check_queue(sqs, region, account, prefix)
-        
         # Make a list of all downloads
         downloads = []
         for dlc_list in self.dlc_lists:
@@ -427,43 +424,6 @@ class Partition:
             return True
         else:
             return False
-        
-        
-    def check_queue(self, sqs, region, account, prefix):
-        """Check queue to see if there are any downloads from previous executions.
-        
-        Extends dlc_list attribute to include download list from queue.
-        """
-        
-        # Read in queue nessages
-        try:
-            messages = sqs.receive_message(
-                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs",
-                AttributeNames=["All"],
-                MessageAttributeNames=["dataset"],
-                MaxNumberOfMessages=10
-            )
-            
-            # Create list of messages for dataset
-            dlc_list = []
-            for message in messages["Messages"]:
-                if message["MessageAttributes"]["dataset"]["StringValue"] == self.dataset:
-                    dlc_list.extend(json.loads(message["Body"]))
-                    # Delete message
-                    response = sqs.delete_message(
-                        QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs",
-                        ReceiptHandle=message["ReceiptHandle"]
-                    )
-                    print(f"Found pending job(s): {message['Body']}")           
-                        
-        except botocore.exceptions.ClientError as e:
-            raise e
-
-        except KeyError as e:
-            print("No pending jobs found.")
-        
-        dlc_list = list(set(dlc_list))
-        self.dlc_lists.extend(dlc_list)
         
 def get_num_lic_avil(dataset, unique_id, prefix):
     """Get the number of IDL licenses available."""
