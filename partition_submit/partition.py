@@ -169,7 +169,7 @@ class Partition:
             }
             final_total += total_downloads
         
-        return json_dict, total_downloads
+        return json_dict, final_total
     
     def write_unmatched_json(self):
         """Write download file lists and JSON for unmatched file downloads."""
