@@ -4,9 +4,6 @@
 Submit takes the JSON files created from partition and submits them as jobs.
 """
 
-# Standard imports
-import json
-
 # Third party imports
 import boto3
 import botocore
@@ -111,7 +108,7 @@ class Submit:
                                         prefix))
         return unmatched
     
-    def submit_jobs(self, job_list):
+    def submit_jobs(self, job_list, logger=None):
         """Submit jobs to AWS Batch.
         
         Parameters
@@ -126,9 +123,9 @@ class Submit:
             for job in jobs:
                 try:
                     if len(job_ids) == 0:
-                        job_ids.append(submit(job, 0))
+                        job_ids.append(submit(job, 0, logger))
                     else:
-                        job_ids.append(submit(job, job_ids[-1]))
+                        job_ids.append(submit(job, job_ids[-1], logger))
                 except botocore.exceptions.ClientError as error:
                     raise error
             dataset_job_ids.append(job_ids)
@@ -137,7 +134,7 @@ class Submit:
         p_job_ids = []
         for i in range(len(dataset_job_ids) - 1):   # Exclude unmatched downloads
             p_job_ids.append(dataset_job_ids[i][2])
-        dataset_job_ids.append([submit(self.license_job, p_job_ids)])
+        dataset_job_ids.append([submit(self.license_job, p_job_ids, logger)])
         
         return dataset_job_ids
                     
@@ -179,7 +176,7 @@ def organize_jobs(job_dict, num_ql, num_r):
     job_list = quicklook.tolist() + refined.tolist()
     return job_list
             
-def submit(job, job_id):
+def submit(job, job_id, logger=None):
     """Submit job to AWS Batch.
     
     Raises: botocore.exceptions.ClientError
@@ -233,5 +230,5 @@ def submit(job, job_id):
     except botocore.exceptions.ClientError as error:
         raise error
 
-    print(f"Job submitted: {response['jobName']}")
+    if logger: logger.info(f"Job submitted: {response['jobName']}")
     return response["jobId"]   # Job identifier

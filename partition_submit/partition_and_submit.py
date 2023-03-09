@@ -11,9 +11,7 @@ Command line arguments:
 """
 
 # Standard imports
-import argparse
 import json
-import os
 import pathlib
 import shutil
 import sys
@@ -24,6 +22,7 @@ import botocore
 import fsspec
 
 # Local imports
+from notify import get_logger
 from partition import Partition
 from submit import Submit
 
@@ -96,7 +95,7 @@ def copy_to_efs(datadir, partitions):
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
             shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")  
             
-def delete_s3(dataset, prefix, downloads_list):
+def delete_s3(dataset, prefix, downloads_list, logger):
     """Delete DLC-created download lists from S3 bucket."""
     
     s3 = boto3.client("s3")
@@ -104,36 +103,35 @@ def delete_s3(dataset, prefix, downloads_list):
         try:
             response = s3.delete_object(Bucket=f"{prefix}-download-lists",
                                         Key=f"{dataset}/{txt_file}")
-            print(f"S3 file deleted: {dataset}/{txt_file}")      
+            logger.info(f"S3 file deleted: {dataset}/{txt_file}")      
         except botocore.exceptions.ClientError as e:
-            raise e
-            
+            raise e  
 
-def handle_error(error):
+def handle_error(error, logger):
     """Print out error message and exit."""
     
-    print("Error encountered.")
-    print(error)
-    print("System exiting.")
+    logger.error("Error encountered.")
+    logger.error(error)
+    logger.error("System exiting.")
     sys.exit(1)
     
-def print_jobs(partitions):
+def print_jobs(partitions, logger):
     """Print the number of jobs per component and processing type."""
     
     if "quicklook" in partitions.keys():
-        print(f"Number of quicklook downloader jobs: {len(partitions['quicklook']['downloader'])}")
-        print(f"Number of quicklook combiner jobs: {len(partitions['quicklook']['combiner'])}")
-        print(f"Number of quicklook processor jobs: {len(partitions['quicklook']['processor'])}")
-        print(f"Number of quicklook uploader jobs: {len(partitions['quicklook']['uploader'])}")
+        logger.info(f"Number of quicklook downloader jobs: {len(partitions['quicklook']['downloader'])}")
+        logger.info(f"Number of quicklook combiner jobs: {len(partitions['quicklook']['combiner'])}")
+        logger.info(f"Number of quicklook processor jobs: {len(partitions['quicklook']['processor'])}")
+        logger.info(f"Number of quicklook uploader jobs: {len(partitions['quicklook']['uploader'])}")
         
     if "refined" in partitions.keys():
-        print(f"Number of refined downloader jobs: {len(partitions['refined']['downloader'])}")
-        print(f"Number of refined combiner jobs: {len(partitions['refined']['combiner'])}")
-        print(f"Number of refined processor jobs: {len(partitions['refined']['processor'])}")
-        print(f"Number of refined uploader jobs: {len(partitions['refined']['uploader'])}")
+        logger.info(f"Number of refined downloader jobs: {len(partitions['refined']['downloader'])}")
+        logger.info(f"Number of refined combiner jobs: {len(partitions['refined']['combiner'])}")
+        logger.info(f"Number of refined processor jobs: {len(partitions['refined']['processor'])}")
+        logger.info(f"Number of refined uploader jobs: {len(partitions['refined']['uploader'])}")
     
     if "unmatched" in partitions.keys():
-        print(f"Number of unmatched downloader jobs: {len(partitions['unmatched']['downloader'])}")
+        logger.info(f"Number of unmatched downloader jobs: {len(partitions['unmatched']['downloader'])}")
 
 def read_config(prefix):
     """Read in JSON config file for AWS Batch job submission."""
@@ -158,40 +156,43 @@ def event_handler(event, context):
     config = read_config(prefix)
     download_lists = body["txt_list"]
     
+    # Logger
+    logger = get_logger()
+    
     # Partition
     try:
         partition = Partition(dataset, download_lists, datadir, prefix)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
-        print(f"Unique idenitifier: {partition.unique_id}")
-        print(f"Number of licenses available: {partition.num_lic_avail}.")
-        print(f"Total number of downloads: {total_downloads}")
+        logger.info(f"Unique idenitifier: {partition.unique_id}")
+        logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
+        logger.info(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
         handle_error(e)
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
-        print_jobs(partitions)
+        print_jobs(partitions, logger)
         
         # Copy S3 text files and /tmp JSON files to EFS
         copy_to_efs(datadir, partitions)
-        print("Coordinating files copied to EFS directories.")
+        logger.info("Coordinating files copied to EFS directories.")
         
         # Create and submit job arrays
         submit = Submit(config, dataset, datadir)
         job_list = submit.create_jobs(partitions, prefix, partition.unique_id)
         try:
-            job_ids = submit.submit_jobs(job_list)
+            job_ids = submit.submit_jobs(job_list, logger)
             for job_id in job_ids:
-                print(f"Job executing: {job_id}")
+                logger.info(f"Job executing: {job_id}")
             # print(json.dumps(job_ids,indent=2))
         except botocore.exceptions.ClientError as e:
-            handle_error(e)
+            handle_error(e, logger)
         
         # Delete download text file lists from S3 bucket
         try:
-            delete_s3(dataset, prefix, download_lists)
+            delete_s3(dataset, prefix, download_lists, logger)
         except botocore.exceptions.ClientError as e:
-            handle_error(e)
+            handle_error(e, logger)
         
     else:
-        print(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
+        logger.info(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")

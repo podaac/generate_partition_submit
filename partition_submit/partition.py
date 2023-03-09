@@ -20,6 +20,9 @@ import botocore
 import fsspec
 import numpy as np
 
+# Local imports
+from notify import get_logger
+
 class Partition:
     """Paritions OBPG downloads into chunk-sized jobs based on IDL licenses.
     
@@ -73,9 +76,10 @@ class Partition:
         
         self.dataset = dataset
         self.dlc_lists = dlc_lists
+        self.logger = get_logger()
         self.unique_id = random.randint(1000, 9999)
         try:
-            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix)
+            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
         except botocore.exceptions.ClientError as e:
             raise e
         self.obpg_files = {
@@ -101,7 +105,7 @@ class Partition:
                     }
                 }
             )
-            print(f"Updated queue: https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs")
+            self.logger.info(f"Updated queue: https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs")
         except botocore.exceptions.ClientError as e:
             raise e
         
@@ -425,7 +429,7 @@ class Partition:
         else:
             return False
         
-def get_num_lic_avil(dataset, unique_id, prefix):
+def get_num_lic_avil(dataset, unique_id, prefix, logger):
     """Get the number of IDL licenses available."""
     
     # Open connection to parameter store
@@ -435,7 +439,7 @@ def get_num_lic_avil(dataset, unique_id, prefix):
     try:
         license_data = open_license(ssm, prefix, dataset)  
         while license_data["retrieving_license"] == "True":
-            print("Waiting for license retrieval...")
+            logger.info("Waiting for license retrieval...")
             time.sleep(3)
             license_data = open_license(ssm, prefix) 
     except botocore.exceptions.ClientError as e:
