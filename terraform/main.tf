@@ -52,6 +52,10 @@ data "aws_security_groups" "vpc_default_sg" {
   }
 }
 
+data "aws_sns_topic" "batch_failure_topic" {
+  name = "${var.prefix}-batch-job-failure"
+}
+
 data "aws_sqs_queue" "download_lists" {
   name = "${var.prefix}-download-lists"
 }
