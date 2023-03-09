@@ -193,7 +193,6 @@ def event_handler(event, context):
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
-        raise botocore.exceptions.ClientError({ "Error": {"Code": 500, "Message": "Test error"} }, "download_file")
     except botocore.exceptions.ClientError as e:
         handle_error(e, logger)
     
