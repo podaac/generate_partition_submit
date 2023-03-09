@@ -23,6 +23,7 @@ import botocore
 import fsspec
 
 # Local imports
+from notify import notify
 from partition import Partition
 from submit import Submit
 
@@ -135,8 +136,9 @@ def get_logger():
 def handle_error(error, logger):
     """Print out error message and exit."""
     
-    logger.error("Error encountered.")
+    logger.error(f"Error encountered: {type(error)}.")
     logger.error(error)
+    notify(logger, "ERROR", error, type(error))
     logger.error("System exiting.")
     sys.exit(1)
     
