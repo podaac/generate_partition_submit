@@ -20,9 +20,6 @@ import botocore
 import fsspec
 import numpy as np
 
-# Local imports
-from notify import get_logger
-
 class Partition:
     """Paritions OBPG downloads into chunk-sized jobs based on IDL licenses.
     
@@ -60,7 +57,7 @@ class Partition:
     # Constants
     BATCH_SIZE = 10
     
-    def __init__(self, dataset, dlc_lists, out_dir, prefix):
+    def __init__(self, dataset, dlc_lists, out_dir, prefix, logger):
         """
         Attributes
         ----------
@@ -76,7 +73,7 @@ class Partition:
         
         self.dataset = dataset
         self.dlc_lists = dlc_lists
-        self.logger = get_logger()
+        self.logger = logger
         self.unique_id = random.randint(1000, 9999)
         try:
             self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)

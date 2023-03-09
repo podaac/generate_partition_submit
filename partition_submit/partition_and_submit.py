@@ -12,6 +12,7 @@ Command line arguments:
 
 # Standard imports
 import json
+import logging
 import pathlib
 import shutil
 import sys
@@ -22,7 +23,6 @@ import botocore
 import fsspec
 
 # Local imports
-from notify import get_logger
 from partition import Partition
 from submit import Submit
 
@@ -106,6 +106,31 @@ def delete_s3(dataset, prefix, downloads_list, logger):
             logger.info(f"S3 file deleted: {dataset}/{txt_file}")      
         except botocore.exceptions.ClientError as e:
             raise e  
+        
+def get_logger():
+    """Return a formatted logger object."""
+    
+    # Remove AWS Lambda logger
+    logger = logging.getLogger()
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+    
+    # Create a Logger object and set log level
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    # Create a handler to console and set level
+    console_handler = logging.StreamHandler()
+
+    # Create a formatter and add it to the handler
+    console_format = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s : %(message)s")
+    console_handler.setFormatter(console_format)
+
+    # Add handlers to logger
+    logger.addHandler(console_handler)
+
+    # Return logger
+    return logger  
 
 def handle_error(error, logger):
     """Print out error message and exit."""
@@ -161,13 +186,14 @@ def event_handler(event, context):
     
     # Partition
     try:
-        partition = Partition(dataset, download_lists, datadir, prefix)
+        partition = Partition(dataset, download_lists, datadir, prefix, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
+        raise botocore.exceptions.ClientError({ "Error": {"Code": 500, "Message": "Test error"} }, "download_file")
     except botocore.exceptions.ClientError as e:
-        handle_error(e)
+        handle_error(e, logger)
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
