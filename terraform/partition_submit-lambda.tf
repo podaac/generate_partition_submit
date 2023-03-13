@@ -14,7 +14,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
     security_group_ids = data.aws_security_groups.vpc_default_sg.ids
   }
   file_system_config {
-    arn              = data.aws_efs_access_points.aws_efs_generate_ap.arns[0]
+    arn              = data.aws_efs_access_points.aws_efs_generate_ap.arns[1]
     local_mount_path = "/mnt/data"
   }
 }
