@@ -1,6 +1,6 @@
 # Lambda function
 resource "aws_lambda_function" "aws_lambda_partition_submit" {
-  image_uri     = "${local.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.prefix}-partition-submit:latest"
+  image_uri     = "${data.aws_ecr_repository.partition_submit.repository_url}:latest"
   function_name = "${var.prefix}-partition-submit"
   role          = aws_iam_role.aws_lambda_execution_role.arn
   package_type  = "Image"
