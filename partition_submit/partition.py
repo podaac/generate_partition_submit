@@ -87,8 +87,10 @@ class Partition:
         self.unmatched = []
         self.out_dir = Path(out_dir)
         
-    def update_queue(self, sqs, region, account, prefix):
+    def update_queue(self, region, account, prefix):
         """Add download lists to queue."""
+        
+        sqs = boto3.client("sqs")
         
         # Send to queue
         try:
@@ -107,22 +109,19 @@ class Partition:
             raise e
         
     def partition_downloads(self, region, account, prefix):
-        """Load all available downloads and partition them based on licenses avialable."""
-        
-        # SQS queue
-        sqs = boto3.client("sqs")
+        """Load all available downloads and partition them based on licenses avialable."""       
         
         # Check the number of available licenses
         if self.num_lic_avail < 2:   # One license per processing type
             try:
-                self.update_queue(sqs, region, account, prefix)
+                self.update_queue(region, account, prefix)
             except botocore.exceptions.ClientError as e:
                 raise e
             return {}, 0
         
         else:
             # Load, partition and write download lists
-            self.load_downloads(sqs, region, account, prefix)
+            self.load_downloads(prefix)
             self.chunk_downloads_job_array()
             return self.write_json_files()
         
@@ -306,7 +305,7 @@ class Partition:
                 if "oc_file" in ptype_dict[sst]: l.append(ptype_dict[sst]["oc_file"])
             self.obpg_files[obpg_key][-1].append(l)
         
-    def load_downloads(self, sqs, region, account, prefix):
+    def load_downloads(self, prefix):
         """Load downloads and group by SST file."""
         
         # Make a list of all downloads
