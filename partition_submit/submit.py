@@ -132,8 +132,12 @@ class Submit:
         
         # Submit license jobs with dependencies on processor jobs
         p_job_ids = []
-        for i in range(len(dataset_job_ids) - 1):   # Exclude unmatched downloads
-            p_job_ids.append(dataset_job_ids[i][2])
+        if len(dataset_job_ids) == 1:   # Only one job per component
+            p_job_ids.append(dataset_job_ids[0][2])
+        else:
+            for i in range(len(dataset_job_ids) - 1):   # Exclude unmatched downloads
+                p_job_ids.append(dataset_job_ids[i][2])
+
         dataset_job_ids.append([submit(self.license_job, p_job_ids, logger)])
         
         return dataset_job_ids
