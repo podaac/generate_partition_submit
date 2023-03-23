@@ -16,6 +16,7 @@ import logging
 import pathlib
 import shutil
 import sys
+import time
 
 # Third-party imports
 import boto3
@@ -133,14 +134,99 @@ def get_logger():
     # Return logger
     return logger  
 
-def handle_error(error, logger):
-    """Print out error message and exit."""
+def handle_error(error, unique_id, prefix, dataset, logger):
+    """Print out error message, notify users, return licenses, and exit."""
     
     logger.error(f"Error encountered: {type(error)}.")
     logger.error(error)
+    try:
+        return_licenses(unique_id, prefix, dataset, logger)
+    except botocore.exceptions.ClientError as e:
+        logger.error(f"Error trying to restore reserved IDL licenses.")
+        logger.error(e)
     notify(logger, "ERROR", error, type(error))
     logger.error("System exiting.")
     sys.exit(1)
+    
+def return_licenses(unique_id, prefix, dataset, logger):
+    """Return licenses that were reserved for current workflow."""
+    
+    ssm = boto3.client("ssm", region_name="us-west-2")
+    try:
+        # Get number of licenses that were used in the workflow
+        dataset_lic = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}-{unique_id}-lic")["Parameter"]["Value"]
+        floating_lic = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}-{unique_id}-floating")["Parameter"]["Value"]
+        
+        # Wait until no other process is updating license info
+        retrieving_lic =  ssm.get_parameter(Name=f"{prefix}-idl-retrieving-license")["Parameter"]["Value"]
+        while retrieving_lic == "True":
+            logger.info("Watiing for license retrieval...")
+            time.sleep(3)
+            retrieving_lic =  ssm.get_parameter(Name=f"{prefix}-idl-retrieving-license")["Parameter"]["Value"]
+        
+        # Place hold on licenses so they are not changed
+        hold_license(ssm, prefix, "True", logger)  
+        
+        # Return licenses to appropriate parameters
+        write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger)
+        
+        # Release hold as done updating
+        hold_license(ssm, prefix, "False", logger)
+        
+        # Delete unique parameters
+        response = ssm.delete_parameters(
+            Names=[f"{prefix}-idl-{dataset}-{unique_id}-lic",
+                    f"{prefix}-idl-{dataset}-{unique_id}-floating"]
+        )
+        logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-lic")
+        logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-floating")
+        
+    except botocore.exceptions.ClientError as e:
+        raise e
+
+def hold_license(ssm, prefix, on_hold, logger):
+        """Put parameter license number ot use indicating retrieval in process."""
+        
+        try:
+            response = ssm.put_parameter(
+                Name=f"{prefix}-idl-retrieving-license",
+                Type="String",
+                Value=on_hold,
+                Tier="Standard",
+                Overwrite=True
+            )
+        except botocore.exceptions.ClientError as e:
+            hold_action = "place" if on_hold == "True" else "remove"
+            logger.error(f"Could not {hold_action} a hold on licenses...")
+            raise e
+        
+def write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger):
+    """Write license data to indicate number of licenses ready to be used."""
+    
+    try:
+        current = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}")["Parameter"]["Value"]
+        total = int(dataset_lic) + int(current)
+        response = ssm.put_parameter(
+            Name=f"{prefix}-idl-{dataset}",
+            Type="String",
+            Value=str(total),
+            Tier="Standard",
+            Overwrite=True
+        )
+        current_floating = ssm.get_parameter(Name=f"{prefix}-idl-floating")["Parameter"]["Value"]
+        floating_total = int(floating_lic) + int(current_floating)
+        response = ssm.put_parameter(
+            Name=f"{prefix}-idl-floating",
+            Type="String",
+            Value=str(floating_total),
+            Tier="Standard",
+            Overwrite=True
+        )
+        logger.info(f"Wrote {dataset_lic} license(s) to {dataset}.")
+        logger.info(f"Wrote {floating_lic} license(s)to floating.")
+    except botocore.exceptions.ClientError as e:
+        logger.error(f"Could not return {dataset} and floating licenses...")
+        raise e
     
 def print_jobs(partitions, logger):
     """Print the number of jobs per component and processing type."""
@@ -194,7 +280,9 @@ def event_handler(event, context):
         logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
-        handle_error(e, logger)
+        handle_error(e, partition.unique_id, prefix, dataset, logger)
+    except FileNotFoundError as e:
+        handle_error(e, partition.unique_id, prefix, dataset, logger)
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
@@ -213,13 +301,13 @@ def event_handler(event, context):
                 logger.info(f"Job executing: {job_id}")
             # print(json.dumps(job_ids,indent=2))
         except botocore.exceptions.ClientError as e:
-            handle_error(e, logger)
+            handle_error(e, partition.unique_id, prefix, dataset, logger)
         
         # Delete download text file lists from S3 bucket
         try:
             delete_s3(dataset, prefix, download_lists, logger)
         except botocore.exceptions.ClientError as e:
-            handle_error(e, logger)
+            handle_error(e, partition.unique_id, prefix, dataset, logger)
         
     else:
         logger.info(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
