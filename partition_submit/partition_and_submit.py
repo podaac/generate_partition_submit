@@ -271,6 +271,7 @@ def event_handler(event, context):
     
     # Logger
     logger = get_logger()
+    logger.info(f"Event - {event}")
     
     # Partition
     try:
