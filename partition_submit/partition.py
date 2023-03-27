@@ -437,7 +437,7 @@ def get_num_lic_avil(dataset, unique_id, prefix, logger):
         while license_data["retrieving_license"] == "True":
             logger.info("Waiting for license retrieval...")
             time.sleep(3)
-            license_data = open_license(ssm, prefix) 
+            license_data = open_license(ssm, prefix, dataset) 
     except botocore.exceptions.ClientError as e:
         raise e
         
