@@ -165,11 +165,13 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Resource" : "${data.aws_sqs_queue.pending_jobs.arn}"
       },
       {
-        "Sid" : "AllowSSMGetPut",
+        "Sid" : "AllowSSMGetPutDelete",
         "Effect" : "Allow",
         "Action" : [
           "ssm:GetParameter",
-          "ssm:PutParameter"
+          "ssm:PutParameter",
+          "ssm:DeleteParameter",
+          "ssm:DeleteParameters"
         ],
         "Resource" : "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/${var.prefix}*"
       },
