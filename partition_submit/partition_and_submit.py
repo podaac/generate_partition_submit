@@ -297,10 +297,9 @@ def event_handler(event, context):
         submit = Submit(config, dataset, datadir)
         job_list = submit.create_jobs(partitions, prefix, partition.unique_id)
         try:
-            job_ids = submit.submit_jobs(job_list, logger)
-            for job_id in job_ids:
-                logger.info(f"Job executing: {job_id}")
-            # print(json.dumps(job_ids,indent=2))
+            job_ids, job_names = submit.submit_jobs(job_list, logger)
+            for i in range(len(job_ids)):
+                logger.info(f"Job executing: {job_names[i]} {job_ids[i]}")
         except botocore.exceptions.ClientError as e:
             handle_error(e, partition.unique_id, prefix, dataset, logger)
         
