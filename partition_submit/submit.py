@@ -118,14 +118,17 @@ class Submit:
         """
         
         dataset_job_ids = []
+        dataset_job_names = []
         for jobs in job_list:
             job_ids = []
             for job in jobs:
                 try:
                     if len(job_ids) == 0:
                         job_ids.append(submit(job, 0, logger))
+                        dataset_job_names.append(job.job_name)
                     else:
                         job_ids.append(submit(job, job_ids[-1], logger))
+                        dataset_job_names.append(job.job_name)
                 except botocore.exceptions.ClientError as error:
                     raise error
             dataset_job_ids.append(job_ids)
@@ -133,14 +136,18 @@ class Submit:
         # Submit license jobs with dependencies on processor jobs
         p_job_ids = []
         if len(dataset_job_ids) == 1:   # Only one job per component
-            p_job_ids.append(dataset_job_ids[0][2])
+            if len(dataset_job_ids[0]):
+                p_job_ids.append(dataset_job_ids[0][0])
+            else:
+                p_job_ids.append(dataset_job_ids[0][2])
         else:
             for i in range(len(dataset_job_ids) - 1):   # Exclude unmatched downloads
                 p_job_ids.append(dataset_job_ids[i][2])
 
         dataset_job_ids.append([submit(self.license_job, p_job_ids, logger)])
+        dataset_job_names.append(self.license_job.job_name)
         
-        return dataset_job_ids
+        return dataset_job_ids, dataset_job_names
                     
 def organize_jobs(job_dict, num_ql, num_r):
     """Organize JobArray jobs in job list by component and counter.
