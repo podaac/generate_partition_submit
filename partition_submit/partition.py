@@ -59,7 +59,7 @@ class Partition:
     # Constants
     BATCH_SIZE = 10
     
-    def __init__(self, dataset, dlc_lists, out_dir, prefix, logger):
+    def __init__(self, dataset, dlc_lists, out_dir, prefix, threshold, logger):
         """
         Attributes
         ----------
@@ -86,11 +86,12 @@ class Partition:
             "quicklook": [],
             "refined": []
         }
+        self.out_dir = Path(out_dir)
         self.prefix = prefix
         self.sst_dict = {}
         self.sst_only = []
+        self.threshold = threshold
         self.unmatched = []
-        self.out_dir = Path(out_dir)
         
     def partition_downloads(self, region, account, prefix):
         """Load all available downloads and partition them based on licenses avialable."""       
@@ -141,6 +142,9 @@ class Partition:
             with fsspec.open(s3_url, mode='r') as fh:
                 downloads.extend(fh.read().splitlines())
             self.logger.info(f"Downloads retrieved from: {s3_url}.")
+            
+        # Load refined SST files
+        downloads.extend(self.load_refined_sst())
                 
         # Split into quicklook and refined, Match and group files
         quicklook = [ dl for dl in downloads if "NRT" in dl ]
@@ -148,7 +152,29 @@ class Partition:
         
         refined = [ dl for dl in downloads if not "NRT" in dl ]
         self.group_downloads(refined, "refined")
-    
+        
+    def load_refined_sst(self):
+        """Load refined SST files stored for download that are older than
+        the threshold attribute.
+        
+        Returns list of downloads.
+        """
+        
+        threshold_time = datetime.datetime.now() - datetime.timedelta(days=self.threshold)
+        json_file = f"{threshold_time.strftime('%Y%m%dT%H0000')}.json"
+        
+        # Determine if file exists
+        s3_client = boto3.client("s3")
+        json_file_exists = self.get_s3_json_file(s3_client, json_file)
+        
+        if json_file_exists:
+            self.logger.info(f"Located refined SST JSON file in holding tank: {json_file}")
+            with open(self.out_dir.joinpath(json_file)) as jf:
+                return json.load(jf)
+        else:
+            self.logger.info(f"Could not locate refined SST JSON file in holding tank:{json_file}.")
+            return []
+        
     def group_downloads(self, downloads, processing_type):
         """Match SST files to appropriate SST3/4 or OC files.
         

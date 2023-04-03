@@ -1,4 +1,5 @@
 {
+    "threshold": 30,
     "downloader_aqua_quicklook" : {
         "cpu": "5",
         "memory": "500",
