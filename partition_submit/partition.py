@@ -90,6 +90,7 @@ class Partition:
         self.prefix = prefix
         self.sst_dict = {}
         self.sst_only = []
+        self.sst_process = []
         self.threshold = threshold
         self.unmatched = []
         
@@ -108,7 +109,7 @@ class Partition:
             # Load, partition and write download lists
             self.load_downloads(prefix)
             self.chunk_downloads_job_array()
-            self.store_sst_only()
+            if len(self.sst_only) > 0: self.store_sst_only()
             return self.write_json_files()
         
     def update_queue(self, region, account, prefix):
@@ -144,8 +145,10 @@ class Partition:
             self.logger.info(f"Downloads retrieved from: {s3_url}.")
             
         # Load refined SST files
-        downloads.extend(self.load_refined_sst())
-                
+        sst_process = self.load_refined_sst()
+        self.sst_process = sst_process    # Track for later
+        downloads.extend(sst_process)
+        
         # Split into quicklook and refined, Match and group files
         quicklook = [ dl for dl in downloads if "NRT" in dl ]
         self.group_downloads(quicklook, "quicklook")
@@ -160,20 +163,42 @@ class Partition:
         Returns list of downloads.
         """
         
-        threshold_time = datetime.datetime.now() - datetime.timedelta(days=self.threshold)
-        json_file = f"{threshold_time.strftime('%Y%m%dT%H0000')}.json"
-        
-        # Determine if file exists
+        downloads = []
         s3_client = boto3.client("s3")
-        json_file_exists = self.get_s3_json_file(s3_client, json_file)
+        try:
+            response = s3_client.list_objects_v2(Bucket=f"{self.prefix}-download-lists", Prefix=f"holding_tank/{self.dataset}")
+        except botocore.exceptions.ClientError as e:
+            raise e
         
-        if json_file_exists:
-            self.logger.info(f"Located refined SST JSON file in holding tank: {json_file}")
-            with open(self.out_dir.joinpath(json_file)) as jf:
-                return json.load(jf)
+        # List files
+        if len(response["Contents"]) > 0:
+            threshold_time = datetime.datetime.utcnow() - datetime.timedelta(days=self.threshold)
+            json_files = list(filter(lambda json_file: self.threshold_filter(json_file, threshold_time), response["Contents"]))
+            
+        # Try load file data
+        s3_url = f"s3://{self.prefix}-download-lists"
+        for json_file in json_files:
+            try:
+                with fsspec.open(f"{s3_url}/{json_file['Key']}", mode='r') as fh:
+                    downloads.extend(json.load(fh))
+                s3_client.delete_object(Bucket=f"{self.prefix}-download-lists", Key=json_file["Key"])
+                self.logger.info(f"Loaded and deleted refined SST JSON file: {json_file['Key']}")
+            except botocore.exceptions.ClientError as e:    # Delete
+                raise e
+            except Exception as e:
+                self.logger.info(f"Issue with JSON file: {json_file['Key']}.")    # fsspec
+                raise e
+        
+        return downloads
+        
+    def threshold_filter(self, json_file, threshold_time):
+        """Filter json_files based on threshold value."""
+        
+        json_time = datetime.datetime.strptime(json_file["Key"].split('/')[-1].split('.')[0], "%Y%m%dT%H%M%S")
+        if json_time < threshold_time:    # All JSON files older than threshold
+            return True
         else:
-            self.logger.info(f"Could not locate refined SST JSON file in holding tank:{json_file}.")
-            return []
+            return False       
         
     def group_downloads(self, downloads, processing_type):
         """Match SST files to appropriate SST3/4 or OC files.
@@ -362,7 +387,7 @@ class Partition:
         """
         
         # JSON file name
-        json_file = f"{datetime.datetime.now().strftime('%Y%m%dT%H0000')}.json"
+        json_file = f"{datetime.datetime.utcnow().strftime('%Y%m%dT%H0000')}.json"
         
         # Determine if file exists
         s3_client = boto3.client("s3")
