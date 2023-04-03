@@ -45,6 +45,8 @@ class Partition:
         list of files chunked into sublists to be processed
     sst_dict: dictionary
         dictionary with SST file key and SST3/4 or OC file values
+    sst_only: list
+        List of files that did not have any matched SST3/4 or OC files.
     unique_id: integer
         unique identifier for workflow
     unmatched: list
@@ -75,15 +77,18 @@ class Partition:
         self.dlc_lists = dlc_lists
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
-        try:
-            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
-        except botocore.exceptions.ClientError as e:
-            raise e
+        self.num_lic_avail = 5
+        # try:
+        #     self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+        # except botocore.exceptions.ClientError as e:
+        #     raise e
         self.obpg_files = {
             "quicklook": [],
             "refined": []
         }
+        self.prefix = prefix
         self.sst_dict = {}
+        self.sst_only = []
         self.unmatched = []
         self.out_dir = Path(out_dir)
         
@@ -123,7 +128,72 @@ class Partition:
             # Load, partition and write download lists
             self.load_downloads(prefix)
             self.chunk_downloads_job_array()
+            self.store_sst_only()
             return self.write_json_files()
+
+    def store_sst_only(self):
+        """Store refined SST files in the download lists S3 bucket under
+        the holding_tank/dataset key.
+        
+        SST files are stored in JSON files organized by date and hour. This 
+        allows the Generate workflow to process SST files on an hourly basis
+        which chunks up the processing.
+        """
+        
+        # JSON file name
+        json_file = f"{datetime.datetime.now().strftime('%Y%m%dT%H0000')}.json"
+        
+        # Determine if file exists
+        s3_client = boto3.client("s3")
+        json_file_exists = self.get_s3_json_file(s3_client, json_file)
+        
+        # Modify file to include new SST only files
+        if json_file_exists:
+            self.generate_json(self.out_dir.joinpath(json_file), "a")
+        else:
+            self.generate_json(self.out_dir.joinpath(json_file), "w")
+            
+        # Upload file to S3 holding tank
+        self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(json_file))
+        
+    def get_s3_json_file(self, s3_client, json_file):
+        """Check if JSON file exists and download it if it does.
+        
+        Returns True if exists otherwise False.
+        """
+        
+        try:
+            response = s3_client.download_file(f"{self.prefix}-download-lists", f"holding_tank/{self.dataset}/{json_file}", str(self.out_dir.joinpath(json_file)))
+            self.logger.info(f"JSON file downloaded: holding_tank/{self.dataset}/{json_file}")
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                self.logger.info(f"JSON file does not exist: holding_tank/{self.dataset}/{json_file}.")
+                return False
+            else:
+                raise e
+        return True
+    
+    def generate_json(self, json_file, mode):
+        """Either create or modify JSON file to store refined SST files."""
+        
+        # Append to old file if it exists
+        if mode == "a":
+            with open(json_file) as jf:
+                self.sst_only.extend(json.load(jf))
+                self.sst_only = [*set(self.sst_only)]    # Remove any duplicates
+        
+        # Write data out
+        with open(json_file, mode="w") as jf:
+            json.dump(self.sst_only, jf, indent=2)
+            
+    def upload_to_holding_tank(self, s3_client, json_file):
+        """Upload JSON file to S3 holding tank organized by dataset."""
+        
+        try:
+            response = s3_client.upload_file(str(json_file), f"{self.prefix}-download-lists", f"holding_tank/{self.dataset}/{json_file.name}", ExtraArgs={"ServerSideEncryption": "aws:kms"})
+            self.logger.info(f"JSON file uploaded: holding_tank/{self.dataset}/{json_file.name}")
+        except botocore.exceptions.ClientError as e:
+            raise e
         
     def write_json_files(self):
         """Write downloader text files and downloader,combiner and processor
@@ -301,8 +371,14 @@ class Partition:
             l = []
             for sst in sst_chunk:
                 l.append(sst)
-                if "sst34_file" in ptype_dict[sst]: l.append(ptype_dict[sst]["sst34_file"])
-                if "oc_file" in ptype_dict[sst]: l.append(ptype_dict[sst]["oc_file"])
+                if "sst34_file" in ptype_dict[sst]: 
+                    l.append(ptype_dict[sst]["sst34_file"])
+                elif "oc_file" in ptype_dict[sst]: 
+                    l.append(ptype_dict[sst]["oc_file"])
+                else:
+                    if not "NRT" in sst:    # Only applies to refined files
+                        self.sst_only.append(sst)
+                        l.remove(sst)
             self.obpg_files[obpg_key][-1].append(l)
         
     def load_downloads(self, prefix):
@@ -314,6 +390,7 @@ class Partition:
             s3_url = f"s3://{prefix}-download-lists/{self.dataset}/{dlc_list}"
             with fsspec.open(s3_url, mode='r') as fh:
                 downloads.extend(fh.read().splitlines())
+            self.logger.info(f"Downloads retrieved from: {s3_url}.")
                 
         # Split into quicklook and refined, Match and group files
         quicklook = [ dl for dl in downloads if "NRT" in dl ]
