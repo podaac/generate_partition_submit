@@ -109,7 +109,9 @@ class Partition:
             # Load, partition and write download lists
             self.load_downloads(prefix)
             self.chunk_downloads_job_array()
-            if len(self.sst_only) > 0: self.store_sst_only()
+            if len(self.sst_only) > 0: 
+                self.logger.info("Unmatched refined SST files detected.")
+                self.store_sst_only()
             return self.write_json_files()
         
     def update_queue(self, region, account, prefix):
@@ -372,7 +374,7 @@ class Partition:
                 elif "oc_file" in ptype_dict[sst]: 
                     l.append(ptype_dict[sst]["oc_file"])
                 else:
-                    if not "NRT" in sst:    # Only applies to refined files
+                    if not "NRT" in sst and not sst in self.sst_process:    # Only applies to refined files
                         self.sst_only.append(sst)
                         l.remove(sst)
             self.obpg_files[obpg_key][-1].append(l)
