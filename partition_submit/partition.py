@@ -92,6 +92,24 @@ class Partition:
         self.unmatched = []
         self.out_dir = Path(out_dir)
         
+    def partition_downloads(self, region, account, prefix):
+        """Load all available downloads and partition them based on licenses avialable."""       
+        
+        # Check the number of available licenses
+        if self.num_lic_avail < 2:   # One license per processing type
+            try:
+                self.update_queue(region, account, prefix)
+            except botocore.exceptions.ClientError as e:
+                raise e
+            return {}, 0
+        
+        else:
+            # Load, partition and write download lists
+            self.load_downloads(prefix)
+            self.chunk_downloads_job_array()
+            self.store_sst_only()
+            return self.write_json_files()
+        
     def update_queue(self, region, account, prefix):
         """Add download lists to queue."""
         
@@ -112,24 +130,6 @@ class Partition:
             self.logger.info(f"Updated queue: https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs")
         except botocore.exceptions.ClientError as e:
             raise e
-        
-    def partition_downloads(self, region, account, prefix):
-        """Load all available downloads and partition them based on licenses avialable."""       
-        
-        # Check the number of available licenses
-        if self.num_lic_avail < 2:   # One license per processing type
-            try:
-                self.update_queue(region, account, prefix)
-            except botocore.exceptions.ClientError as e:
-                raise e
-            return {}, 0
-        
-        else:
-            # Load, partition and write download lists
-            self.load_downloads(prefix)
-            self.chunk_downloads_job_array()
-            self.store_sst_only()
-            return self.write_json_files()
         
     def load_downloads(self, prefix):
         """Load downloads and group by SST file."""
