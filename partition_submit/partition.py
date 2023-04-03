@@ -130,256 +130,6 @@ class Partition:
             self.chunk_downloads_job_array()
             self.store_sst_only()
             return self.write_json_files()
-
-    def store_sst_only(self):
-        """Store refined SST files in the download lists S3 bucket under
-        the holding_tank/dataset key.
-        
-        SST files are stored in JSON files organized by date and hour. This 
-        allows the Generate workflow to process SST files on an hourly basis
-        which chunks up the processing.
-        """
-        
-        # JSON file name
-        json_file = f"{datetime.datetime.now().strftime('%Y%m%dT%H0000')}.json"
-        
-        # Determine if file exists
-        s3_client = boto3.client("s3")
-        json_file_exists = self.get_s3_json_file(s3_client, json_file)
-        
-        # Modify file to include new SST only files
-        if json_file_exists:
-            self.generate_json(self.out_dir.joinpath(json_file), "a")
-        else:
-            self.generate_json(self.out_dir.joinpath(json_file), "w")
-            
-        # Upload file to S3 holding tank
-        self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(json_file))
-        
-    def get_s3_json_file(self, s3_client, json_file):
-        """Check if JSON file exists and download it if it does.
-        
-        Returns True if exists otherwise False.
-        """
-        
-        try:
-            response = s3_client.download_file(f"{self.prefix}-download-lists", f"holding_tank/{self.dataset}/{json_file}", str(self.out_dir.joinpath(json_file)))
-            self.logger.info(f"JSON file downloaded: holding_tank/{self.dataset}/{json_file}")
-        except botocore.exceptions.ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                self.logger.info(f"JSON file does not exist: holding_tank/{self.dataset}/{json_file}.")
-                return False
-            else:
-                raise e
-        return True
-    
-    def generate_json(self, json_file, mode):
-        """Either create or modify JSON file to store refined SST files."""
-        
-        # Append to old file if it exists
-        if mode == "a":
-            with open(json_file) as jf:
-                self.sst_only.extend(json.load(jf))
-                self.sst_only = [*set(self.sst_only)]    # Remove any duplicates
-        
-        # Write data out
-        with open(json_file, mode="w") as jf:
-            json.dump(self.sst_only, jf, indent=2)
-            
-    def upload_to_holding_tank(self, s3_client, json_file):
-        """Upload JSON file to S3 holding tank organized by dataset."""
-        
-        try:
-            response = s3_client.upload_file(str(json_file), f"{self.prefix}-download-lists", f"holding_tank/{self.dataset}/{json_file.name}", ExtraArgs={"ServerSideEncryption": "aws:kms"})
-            self.logger.info(f"JSON file uploaded: holding_tank/{self.dataset}/{json_file.name}")
-        except botocore.exceptions.ClientError as e:
-            raise e
-        
-    def write_json_files(self):
-        """Write downloader text files and downloader,combiner and processor
-        JSON files."""
-        
-        # Write txt files and retrieve JSON data
-        json_dict = {}
-        final_total = 0
-        if len(self.obpg_files["quicklook"]) != 0:
-            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["quicklook"], "quicklook")
-            combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_quicklook")
-            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_quicklook")
-            processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_quicklook")
-            json_dict["quicklook"] = {
-                "combiner": combiner_json_lists,
-                "downloader": downloader_json_lists,
-                "processor": processor_json_lists,
-                "uploader": processor_json_lists,
-                "downloader_txt": downloader_json
-            }
-            final_total += total_downloads
-            
-        if len(self.obpg_files["refined"]) != 0:
-            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["refined"], "refined")
-            combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_refined")
-            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_refined")
-            processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_refined")
-            json_dict["refined"] = {
-                "combiner": combiner_json_lists,
-                "downloader": downloader_json_lists,
-                "processor": processor_json_lists,
-                "uploader": processor_json_lists,
-                "downloader_txt": downloader_json
-            }
-            final_total += total_downloads
-            
-        if len(self.unmatched) != 0:
-            downloader_json, total_downloads = self.write_unmatched_json()
-            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_unmatched")
-            json_dict["unmatched"] = {
-                "downloader": downloader_json_lists,
-                "downloader_txt": downloader_json
-            }
-            final_total += total_downloads
-        
-        return json_dict, final_total
-    
-    def write_unmatched_json(self):
-        """Write download file lists and JSON for unmatched file downloads."""
-        
-        i = 0
-        downloader_json = []
-        total_downloads = 0
-        for job_array in self.unmatched:
-            txt_files = []
-            datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
-            txt_file = f"{self.dataset}_unmatched_{datetime_str}_{i}_{self.unique_id}.txt"
-            with open(self.out_dir.joinpath(txt_file), 'w') as fh:
-                for job in job_array:
-                    fh.write(f"{job}\n")
-                    total_downloads += 1
-            txt_files.append(txt_file)
-            i += 1
-            downloader_json.append(txt_files)
-        return downloader_json, total_downloads
-            
-    def write_json(self, component_json, filename):
-        """Write JSON data for each job array in component JSON."""
-        
-        i = 0
-        filename_list = []
-        for json_data in component_json:
-            filename_list.append(f"{filename}_{i}_{self.unique_id}.json")
-            with open(self.out_dir.joinpath(f"{filename}_{i}_{self.unique_id}.json"), 'w') as jf:
-                json.dump(json_data, jf, indent=2)
-            i += 1
-        return filename_list     
-    
-    def write_txt_get_json(self, job_arrays, ptype=None):
-        """Write download txt list file and return associated combiner, 
-        processor JSON files."""
-        
-        i = 0
-        downloader_json = []
-        combiner_json = []
-        processor_json = []
-        total_downloads = 0
-        for job_array in job_arrays:
-            txt_files = []
-            combiner_jobs = []
-            processor_jobs = []
-            for jobs in job_array:
-                datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
-                txt_file = f"{self.dataset}_{datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{datetime_str}_{i}_{self.unique_id}.txt"
-                with open(self.out_dir.joinpath(txt_file), 'w') as fh:
-                    for job in jobs:
-                        fh.write(f"{job}\n")
-                        total_downloads += 1
-                txt_files.append(txt_file)
-                i += 1
-                if ptype == "quicklook":
-                    combiner_jobs.append([job.split(' ')[0].split('/')[-1].replace(".NRT", "") for job in jobs])
-                else:
-                    combiner_jobs.append([job.split(' ')[0].split('/')[-1] for job in jobs])
-                p_jobs = list(set([job.split(' ')[0].split('/')[-1].split('.')[1] for job in jobs]))
-                p_jobs.sort(reverse=True)
-                processor_jobs.append(p_jobs)
-            combiner_json.append(combiner_jobs)
-            downloader_json.append(txt_files)
-            processor_json.append(processor_jobs)
-            
-        return combiner_json, downloader_json, processor_json, total_downloads
-            
-    def chunk_downloads_job_array(self):
-        """Sort and partition downloads.
-        
-        Quicklook is prioritized and listed first.
-        Unmatched files are sorted and will be downloaded independent of the
-        quicklook or refined batches.
-        """
-        
-        # Sort files and create a large list with quicklook first
-        ql_sst_keys = list(OrderedDict(sorted(self.sst_dict["quicklook"].items(), reverse=True)).keys())
-        r_sst_keys = list(OrderedDict(sorted(self.sst_dict["refined"].items(), reverse=True)).keys())
-        
-        # Chunk sst keys based on number of licenses available to form job arrays            
-        if len(ql_sst_keys) == 0:
-            ql = 0
-            r = self.num_lic_avail
-            chunked_r_keys = np.array_split(r_sst_keys, r)
-            chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
-            for sst in chunked_r_keys:
-                self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
-        elif len(r_sst_keys) == 0:
-            ql = self.num_lic_avail
-            chunked_ql_keys = np.array_split(ql_sst_keys, ql)
-            chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
-            for sst in chunked_ql_keys:
-                self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
-            r = 0
-        else:
-            ql = (self.num_lic_avail) // 2 + (self.num_lic_avail % 2)
-            r = self.num_lic_avail // 2
-            chunked_ql_keys = np.array_split(ql_sst_keys, ql)
-            chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
-            for sst in chunked_ql_keys:
-                self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
-            chunked_r_keys = np.array_split(r_sst_keys, r)
-            chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
-            for sst in chunked_r_keys:
-                self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
-                  
-        # Sort and chunk unmatched by batch size - no license needed
-        if len(self.unmatched) != 0:
-            self.unmatched.sort(reverse=True)
-            batch = math.ceil(len(self.unmatched) / self.BATCH_SIZE)
-            self.unmatched = np.array_split(self.unmatched, batch)
-            
-    def chunk_and_match(self, sst, ptype_dict, obpg_key):
-        """Chunk job array into jobs and then match SST files to OC or SST3/4."""
-        
-        # Chunk the SST files
-        batch = math.ceil(len(sst) / self.BATCH_SIZE)
-        sst_jobs = np.array_split(sst, batch)
-        
-        # Match SST files with OC and SST3/4 files
-        self.match_chunks(sst_jobs, ptype_dict, obpg_key)
-        
-    def match_chunks(self, sst_keys, ptype_dict, obpg_key):
-        """Organized batches of downloads so that SST files are matched with
-        SST3/4 and OC files."""
-        
-        self.obpg_files[obpg_key].append([])
-        for sst_chunk in sst_keys:   
-            l = []
-            for sst in sst_chunk:
-                l.append(sst)
-                if "sst34_file" in ptype_dict[sst]: 
-                    l.append(ptype_dict[sst]["sst34_file"])
-                elif "oc_file" in ptype_dict[sst]: 
-                    l.append(ptype_dict[sst]["oc_file"])
-                else:
-                    if not "NRT" in sst:    # Only applies to refined files
-                        self.sst_only.append(sst)
-                        l.remove(sst)
-            self.obpg_files[obpg_key][-1].append(l)
         
     def load_downloads(self, prefix):
         """Load downloads and group by SST file."""
@@ -501,6 +251,256 @@ class Partition:
             return True
         else:
             return False
+        
+    def chunk_downloads_job_array(self):
+        """Sort and partition downloads.
+        
+        Quicklook is prioritized and listed first.
+        Unmatched files are sorted and will be downloaded independent of the
+        quicklook or refined batches.
+        """
+        
+        # Sort files and create a large list with quicklook first
+        ql_sst_keys = list(OrderedDict(sorted(self.sst_dict["quicklook"].items(), reverse=True)).keys())
+        r_sst_keys = list(OrderedDict(sorted(self.sst_dict["refined"].items(), reverse=True)).keys())
+        
+        # Chunk sst keys based on number of licenses available to form job arrays            
+        if len(ql_sst_keys) == 0:
+            ql = 0
+            r = self.num_lic_avail
+            chunked_r_keys = np.array_split(r_sst_keys, r)
+            chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
+            for sst in chunked_r_keys:
+                self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
+        elif len(r_sst_keys) == 0:
+            ql = self.num_lic_avail
+            chunked_ql_keys = np.array_split(ql_sst_keys, ql)
+            chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
+            for sst in chunked_ql_keys:
+                self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
+            r = 0
+        else:
+            ql = (self.num_lic_avail) // 2 + (self.num_lic_avail % 2)
+            r = self.num_lic_avail // 2
+            chunked_ql_keys = np.array_split(ql_sst_keys, ql)
+            chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
+            for sst in chunked_ql_keys:
+                self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
+            chunked_r_keys = np.array_split(r_sst_keys, r)
+            chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
+            for sst in chunked_r_keys:
+                self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
+                  
+        # Sort and chunk unmatched by batch size - no license needed
+        if len(self.unmatched) != 0:
+            self.unmatched.sort(reverse=True)
+            batch = math.ceil(len(self.unmatched) / self.BATCH_SIZE)
+            self.unmatched = np.array_split(self.unmatched, batch)
+            
+    def chunk_and_match(self, sst, ptype_dict, obpg_key):
+        """Chunk job array into jobs and then match SST files to OC or SST3/4."""
+        
+        # Chunk the SST files
+        batch = math.ceil(len(sst) / self.BATCH_SIZE)
+        sst_jobs = np.array_split(sst, batch)
+        
+        # Match SST files with OC and SST3/4 files
+        self.match_chunks(sst_jobs, ptype_dict, obpg_key)
+        
+    def match_chunks(self, sst_keys, ptype_dict, obpg_key):
+        """Organized batches of downloads so that SST files are matched with
+        SST3/4 and OC files."""
+        
+        self.obpg_files[obpg_key].append([])
+        for sst_chunk in sst_keys:   
+            l = []
+            for sst in sst_chunk:
+                l.append(sst)
+                if "sst34_file" in ptype_dict[sst]: 
+                    l.append(ptype_dict[sst]["sst34_file"])
+                elif "oc_file" in ptype_dict[sst]: 
+                    l.append(ptype_dict[sst]["oc_file"])
+                else:
+                    if not "NRT" in sst:    # Only applies to refined files
+                        self.sst_only.append(sst)
+                        l.remove(sst)
+            self.obpg_files[obpg_key][-1].append(l)
+        
+    def store_sst_only(self):
+        """Store refined SST files in the download lists S3 bucket under
+        the holding_tank/dataset key.
+        
+        SST files are stored in JSON files organized by date and hour. This 
+        allows the Generate workflow to process SST files on an hourly basis
+        which chunks up the processing.
+        """
+        
+        # JSON file name
+        json_file = f"{datetime.datetime.now().strftime('%Y%m%dT%H0000')}.json"
+        
+        # Determine if file exists
+        s3_client = boto3.client("s3")
+        json_file_exists = self.get_s3_json_file(s3_client, json_file)
+        
+        # Modify file to include new SST only files
+        if json_file_exists:
+            self.generate_json(self.out_dir.joinpath(json_file), "a")
+        else:
+            self.generate_json(self.out_dir.joinpath(json_file), "w")
+            
+        # Upload file to S3 holding tank
+        self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(json_file))
+        
+    def get_s3_json_file(self, s3_client, json_file):
+        """Check if JSON file exists and download it if it does.
+        
+        Returns True if exists otherwise False.
+        """
+        
+        try:
+            response = s3_client.download_file(f"{self.prefix}-download-lists", f"holding_tank/{self.dataset}/{json_file}", str(self.out_dir.joinpath(json_file)))
+            self.logger.info(f"JSON file downloaded: holding_tank/{self.dataset}/{json_file}")
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                self.logger.info(f"JSON file does not exist: holding_tank/{self.dataset}/{json_file}.")
+                return False
+            else:
+                raise e
+        return True
+    
+    def generate_json(self, json_file, mode):
+        """Either create or modify JSON file to store refined SST files."""
+        
+        # Append to old file if it exists
+        if mode == "a":
+            with open(json_file) as jf:
+                self.sst_only.extend(json.load(jf))
+                self.sst_only = [*set(self.sst_only)]    # Remove any duplicates
+        
+        # Write data out
+        with open(json_file, mode="w") as jf:
+            json.dump(self.sst_only, jf, indent=2)
+            
+    def upload_to_holding_tank(self, s3_client, json_file):
+        """Upload JSON file to S3 holding tank organized by dataset."""
+        
+        try:
+            response = s3_client.upload_file(str(json_file), f"{self.prefix}-download-lists", f"holding_tank/{self.dataset}/{json_file.name}", ExtraArgs={"ServerSideEncryption": "aws:kms"})
+            self.logger.info(f"JSON file uploaded: holding_tank/{self.dataset}/{json_file.name}")
+        except botocore.exceptions.ClientError as e:
+            raise e
+        
+    def write_json_files(self):
+        """Write downloader text files and downloader,combiner and processor
+        JSON files."""
+        
+        # Write txt files and retrieve JSON data
+        json_dict = {}
+        final_total = 0
+        if len(self.obpg_files["quicklook"]) != 0:
+            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["quicklook"], "quicklook")
+            combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_quicklook")
+            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_quicklook")
+            processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_quicklook")
+            json_dict["quicklook"] = {
+                "combiner": combiner_json_lists,
+                "downloader": downloader_json_lists,
+                "processor": processor_json_lists,
+                "uploader": processor_json_lists,
+                "downloader_txt": downloader_json
+            }
+            final_total += total_downloads
+            
+        if len(self.obpg_files["refined"]) != 0:
+            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["refined"], "refined")
+            combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_refined")
+            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_refined")
+            processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_refined")
+            json_dict["refined"] = {
+                "combiner": combiner_json_lists,
+                "downloader": downloader_json_lists,
+                "processor": processor_json_lists,
+                "uploader": processor_json_lists,
+                "downloader_txt": downloader_json
+            }
+            final_total += total_downloads
+            
+        if len(self.unmatched) != 0:
+            downloader_json, total_downloads = self.write_unmatched_json()
+            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_unmatched")
+            json_dict["unmatched"] = {
+                "downloader": downloader_json_lists,
+                "downloader_txt": downloader_json
+            }
+            final_total += total_downloads
+        
+        return json_dict, final_total 
+    
+    def write_txt_get_json(self, job_arrays, ptype=None):
+        """Write download txt list file and return associated combiner, 
+        processor JSON files."""
+        
+        i = 0
+        downloader_json = []
+        combiner_json = []
+        processor_json = []
+        total_downloads = 0
+        for job_array in job_arrays:
+            txt_files = []
+            combiner_jobs = []
+            processor_jobs = []
+            for jobs in job_array:
+                datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
+                txt_file = f"{self.dataset}_{datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{datetime_str}_{i}_{self.unique_id}.txt"
+                with open(self.out_dir.joinpath(txt_file), 'w') as fh:
+                    for job in jobs:
+                        fh.write(f"{job}\n")
+                        total_downloads += 1
+                txt_files.append(txt_file)
+                i += 1
+                if ptype == "quicklook":
+                    combiner_jobs.append([job.split(' ')[0].split('/')[-1].replace(".NRT", "") for job in jobs])
+                else:
+                    combiner_jobs.append([job.split(' ')[0].split('/')[-1] for job in jobs])
+                p_jobs = list(set([job.split(' ')[0].split('/')[-1].split('.')[1] for job in jobs]))
+                p_jobs.sort(reverse=True)
+                processor_jobs.append(p_jobs)
+            combiner_json.append(combiner_jobs)
+            downloader_json.append(txt_files)
+            processor_json.append(processor_jobs)
+            
+        return combiner_json, downloader_json, processor_json, total_downloads
+    
+    def write_json(self, component_json, filename):
+        """Write JSON data for each job array in component JSON."""
+        
+        i = 0
+        filename_list = []
+        for json_data in component_json:
+            filename_list.append(f"{filename}_{i}_{self.unique_id}.json")
+            with open(self.out_dir.joinpath(f"{filename}_{i}_{self.unique_id}.json"), 'w') as jf:
+                json.dump(json_data, jf, indent=2)
+            i += 1
+        return filename_list    
+    
+    def write_unmatched_json(self):
+        """Write download file lists and JSON for unmatched file downloads."""
+        
+        i = 0
+        downloader_json = []
+        total_downloads = 0
+        for job_array in self.unmatched:
+            txt_files = []
+            datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
+            txt_file = f"{self.dataset}_unmatched_{datetime_str}_{i}_{self.unique_id}.txt"
+            with open(self.out_dir.joinpath(txt_file), 'w') as fh:
+                for job in job_array:
+                    fh.write(f"{job}\n")
+                    total_downloads += 1
+            txt_files.append(txt_file)
+            i += 1
+            downloader_json.append(txt_files)
+        return downloader_json, total_downloads
         
 def get_num_lic_avil(dataset, unique_id, prefix, logger):
     """Get the number of IDL licenses available."""
