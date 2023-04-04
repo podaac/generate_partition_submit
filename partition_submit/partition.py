@@ -77,11 +77,10 @@ class Partition:
         self.dlc_lists = dlc_lists
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
-        self.num_lic_avail = 5
-        # try:
-        #     self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
-        # except botocore.exceptions.ClientError as e:
-        #     raise e
+        try:
+            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+        except botocore.exceptions.ClientError as e:
+            raise e
         self.obpg_files = {
             "quicklook": [],
             "refined": []
@@ -106,13 +105,25 @@ class Partition:
             return {}, 0
         
         else:
-            # Load, partition and write download lists
+            # Locate downloads
             self.load_downloads(prefix)
-            self.chunk_downloads_job_array()
-            if len(self.sst_only) > 0: 
-                self.logger.info("Unmatched refined SST files detected.")
-                self.store_sst_only()
-            return self.write_json_files()
+            
+            # Partition downlaods by SST file timestamp
+            if self.sst_dict: 
+                self.chunk_downloads_job_array()
+                
+                # Store unmatched refined SST files for later processoing
+                if len(self.sst_only) > 0: 
+                    self.logger.info("Unmatched refined SST files detected.")
+                    self.store_sst_only()
+                    
+                # Write and return JSON files for AWS Batch job submission
+                job_partitions, downloads_total = self.write_json_files()
+                return job_partitions, downloads_total
+            
+            # There are no downloads to process
+            else:
+                return {}, 0
         
     def update_queue(self, region, account, prefix):
         """Add download lists to queue."""
@@ -131,7 +142,7 @@ class Partition:
                     }
                 }
             )
-            self.logger.info(f"Updated queue: https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs")
+            self.logger.info(f"Updated pending jobs queue: {self.dlc_lists}.")
         except botocore.exceptions.ClientError as e:
             raise e
         
@@ -142,14 +153,21 @@ class Partition:
         downloads = []
         for dlc_list in self.dlc_lists:
             s3_url = f"s3://{prefix}-download-lists/{self.dataset}/{dlc_list}"
-            with fsspec.open(s3_url, mode='r') as fh:
-                downloads.extend(fh.read().splitlines())
-            self.logger.info(f"Downloads retrieved from: {s3_url}.")
+            try:
+                with fsspec.open(s3_url, mode='r') as fh:
+                    downloads.extend(fh.read().splitlines())
+                    self.logger.info(f"Downloads retrieved from: {s3_url}.")
+            except FileNotFoundError:
+                self.logger.error(f"Download list creator txt could not be found: {s3_url}.")
             
         # Load refined SST files
         sst_process = self.load_refined_sst()
         self.sst_process = sst_process    # Track for later
         downloads.extend(sst_process)
+        
+        # Do not continuing processing if there are no downloads
+        if len(downloads) == 0:
+            return
         
         # Split into quicklook and refined, Match and group files
         quicklook = [ dl for dl in downloads if "NRT" in dl ]
@@ -173,6 +191,9 @@ class Partition:
             raise e
         
         # List files
+        if not "Contents" in response.keys(): 
+            self.logger.info("No files were found in the holding tank.")
+            return downloads
         if len(response["Contents"]) > 0:
             threshold_time = datetime.datetime.utcnow() - datetime.timedelta(days=self.threshold)
             json_files = list(filter(lambda json_file: self.threshold_filter(json_file, threshold_time), response["Contents"]))
