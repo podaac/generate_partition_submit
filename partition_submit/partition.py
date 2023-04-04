@@ -116,10 +116,15 @@ class Partition:
                 if len(self.sst_only) > 0: 
                     self.logger.info("Unmatched refined SST files detected.")
                     self.store_sst_only()
-                    
+                   
+                jobs_exist = self.check_for_jobs()
+                             
                 # Write and return JSON files for AWS Batch job submission
-                job_partitions, downloads_total = self.write_json_files()
-                return job_partitions, downloads_total
+                if jobs_exist:
+                    job_partitions, downloads_total = self.write_json_files()
+                    return job_partitions, downloads_total
+                else:
+                    return {}, 0
             
             # There are no downloads to process
             else:
@@ -398,7 +403,7 @@ class Partition:
                     if not "NRT" in sst and not sst in self.sst_process:    # Only applies to refined files
                         self.sst_only.append(sst)
                         l.remove(sst)
-            self.obpg_files[obpg_key][-1].append(l)
+            if len(l) > 0: self.obpg_files[obpg_key][-1].append(l)
         
     def store_sst_only(self):
         """Store refined SST files in the download lists S3 bucket under
@@ -463,6 +468,16 @@ class Partition:
             self.logger.info(f"JSON file uploaded: holding_tank/{self.dataset}/{json_file.name}")
         except botocore.exceptions.ClientError as e:
             raise e
+        
+    def check_for_jobs(self):
+        """Check OBPG files dictionary for jobs."""
+        
+        jobs_created = False
+        for jobs in self.obpg_files.values():
+            for job in jobs:
+                if len(job) != 0:
+                    jobs_created = True
+        return jobs_created
         
     def write_json_files(self):
         """Write downloader text files and downloader,combiner and processor
