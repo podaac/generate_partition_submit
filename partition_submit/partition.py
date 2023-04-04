@@ -138,14 +138,10 @@ class Partition:
         # Send to queue
         try:
             response = sqs.send_message(
-                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs",
+                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs-{self.dataset}.fifo",
                 MessageBody=json.dumps(self.dlc_lists),
-                MessageAttributes={
-                    "dataset": {
-                        "StringValue": self.dataset,
-                        "DataType": "String"
-                    }
-                }
+                MessageDeduplicationId=f"{prefix}-{self.dataset}-{random.randint(1000,9999)}",
+                MessageGroupId = f"{prefix}-{self.dataset}"
             )
             self.logger.info(f"Updated pending jobs queue: {self.dlc_lists}.")
         except botocore.exceptions.ClientError as e:

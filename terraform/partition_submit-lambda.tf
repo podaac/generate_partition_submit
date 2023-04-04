@@ -163,7 +163,11 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Action" : [
           "sqs:SendMessage"
         ],
-        "Resource" : "${data.aws_sqs_queue.pending_jobs.arn}"
+        "Resource" : [
+          "${data.aws_sqs_queue.pending_jobs_aqua.arn}",
+          "${data.aws_sqs_queue.pending_jobs_terra.arn}",
+          "${data.aws_sqs_queue.pending_jobs_viirs.arn}"
+        ]
       },
       {
         "Sid" : "AllowSSMGetPutDelete",
