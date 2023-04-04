@@ -143,6 +143,7 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Effect" : "Allow",
         "Action" : [
           "s3:GetObject",
+          "s3:PutObject",
           "s3:DeleteObject"
         ],
         "Resource" : "${data.aws_s3_bucket.s3_download_lists.arn}/*"
