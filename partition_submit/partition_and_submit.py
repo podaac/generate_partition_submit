@@ -310,8 +310,8 @@ def event_handler(event, context):
             handle_error(e, partition.unique_id, prefix, dataset, logger)
         
     else:
-        if partition.num_lic_avail == 0:
-            logger.info(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
+        if partition.num_lic_avail < 2:
+            logger.info(f"No available licenses. Any pending downloads have been written to the queue: {prefix}-pending-jobs.")
         else:
             logger.info("No downloads available to process.")
-        return_licenses(partition.unique_id, prefix, dataset, logger)
+            return_licenses(partition.unique_id, prefix, dataset, logger)
