@@ -275,7 +275,7 @@ def event_handler(event, context):
     
     # Partition
     try:
-        partition = Partition(dataset, download_lists, datadir, prefix, logger)
+        partition = Partition(dataset, download_lists, datadir, prefix, config["threshold"], logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
@@ -310,4 +310,8 @@ def event_handler(event, context):
             handle_error(e, partition.unique_id, prefix, dataset, logger)
         
     else:
-        logger.info(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
+        if partition.num_lic_avail == 0:
+            logger.info(f"No available licenses. Download lists have been written to the queue: {prefix}-pending-jobs.")
+        else:
+            logger.info("No downloads available to process.")
+        return_licenses(partition.unique_id, prefix, dataset, logger)
