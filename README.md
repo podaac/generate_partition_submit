@@ -2,6 +2,8 @@
 
 Partitions download list creator text files in AWS Batch jobs (which contain available OBPG downloads) and then submits all Generate worfklow jobs to AWS Batch (downloader -> combiner -> processor -> upload).
 
+Partition & Submit also maintains a holding tank of refined SST files. If it detects any unmatched refined SST files it stores them in a JSON file organized by date and hour in the `download-lists` S3 bucket: `holding_tank/{aqua|terra|viirs}`. It then loads any refined SST files older than a specified threshold and submits them as a part of the Generate workflow. The threshold is speficied in the config file.
+
 Top-level Generate repo: https://github.com/podaac/generate
 
 ## pre-requisites to building
