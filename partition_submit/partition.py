@@ -116,7 +116,8 @@ class Partition:
                 if len(self.sst_only) > 0: 
                     self.logger.info("Unmatched refined SST files detected.")
                     self.store_sst_only()
-                   
+                
+                # Check if there are any remaining files to submit as AWS Batch jobs   
                 jobs_exist = self.check_for_jobs()
                              
                 # Write and return JSON files for AWS Batch job submission
@@ -398,8 +399,12 @@ class Partition:
                 else:
                     if not "NRT" in sst and not sst in self.sst_process:    # Only applies to refined files
                         self.sst_only.append(sst)
-                        l.remove(sst)
-            if len(l) > 0: self.obpg_files[obpg_key][-1].append(l)
+                        l.remove(sst)   # Remove from list so not submitted as Batch job
+            # Add files to submit as jobs or remove placeholder list if none are present
+            if len(l) > 0: 
+                self.obpg_files[obpg_key][-1].append(l)
+            else:
+                self.obpg_files[obpg_key].pop(-1)
         
     def store_sst_only(self):
         """Store refined SST files in the download lists S3 bucket under
