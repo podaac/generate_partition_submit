@@ -141,7 +141,7 @@ class Partition:
             response = sqs.send_message(
                 QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs-{self.dataset}.fifo",
                 MessageBody=json.dumps(self.dlc_lists),
-                MessageDeduplicationId=f"{prefix}-{self.dataset}-{random.randint(1000,9999)}",
+                MessageDeduplicationId=f"{prefix}-{self.dataset}-{self.unique_id}",
                 MessageGroupId = f"{prefix}-{self.dataset}"
             )
             self.logger.info(f"Updated pending jobs queue: {self.dlc_lists}.")

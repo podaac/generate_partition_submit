@@ -138,16 +138,25 @@ def get_logger():
     # Return logger
     return logger  
 
-def handle_error(error, unique_id, prefix, dataset, logger):
+def handle_error(error, unique_id, prefix, dataset, logger, partition=None, account=None, region=None):
     """Print out error message, notify users, return licenses, and exit."""
     
+    # Log error
     logger.error(f"Error encountered: {type(error)}.")
     logger.error(error)
+    
+    # Send download txts to pending jobs queue if applicable
+    if partition:
+        partition.update_queue(region, account, prefix)   # Send txt files to queue
+    
+    # Return licenses
     try:
         return_licenses(unique_id, prefix, dataset, logger)
     except botocore.exceptions.ClientError as e:
         logger.error(f"Error trying to restore reserved IDL licenses.")
         logger.error(e)
+    
+    # Send email
     notify(logger, "ERROR", error, type(error))
     logger.error("System exiting.")
     sys.exit(1)
@@ -232,6 +241,18 @@ def write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger):
         logger.error(f"Could not return {dataset} and floating licenses...")
         raise e
     
+def cancel_jobs(job_ids, job_names, logger):
+    """Cancel all batch jobs."""
+    
+    for i in range(len(job_ids)):
+        for job_id in job_ids[i]:
+            client = boto3.client('batch')
+            try:
+                response = client.terminate_job(jobId=job_id, reason="Partition and Submit lambda encountered a failure.")
+                logger.info(f"Cancelled job: {job_names[i]} - {job_id}")
+            except botocore.exceptions.ClientError as error:
+                logger.error(f"Could not cancel job: {job_names[i]} - {job_id}")   
+    
 def print_jobs(partitions, logger):
     """Print the number of jobs per component and processing type."""
     
@@ -285,9 +306,9 @@ def event_handler(event, context):
         logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
-        handle_error(e, partition.unique_id, prefix, dataset, logger)
+        handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
     except FileNotFoundError as e:
-        handle_error(e, partition.unique_id, prefix, dataset, logger)
+        handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
@@ -304,7 +325,8 @@ def event_handler(event, context):
             for i in range(len(job_ids)):
                 logger.info(f"Job executing: {job_names[i]} {job_ids[i]}")
         except botocore.exceptions.ClientError as e:
-            handle_error(e, partition.unique_id, prefix, dataset, logger)
+            cancel_jobs(job_ids, job_names, logger)
+            handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
         
         # Delete download text file lists from S3 bucket
         try:
