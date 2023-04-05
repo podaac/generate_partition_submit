@@ -244,6 +244,7 @@ def write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger):
 def cancel_jobs(job_ids, job_names, logger):
     """Cancel all batch jobs."""
     
+    logger.info("Error encountered, cancelling all jobs.")
     for i in range(len(job_ids)):
         for job_id in job_ids[i]:
             client = boto3.client('batch')

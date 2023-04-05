@@ -192,6 +192,16 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         ]
       },
       {
+        "Sid" : "AllowBatchTerminateJob",
+        "Effect" : "Allow",
+        "Action" : [
+          "batch:TerminateJob"
+        ],
+        "Resource" : [
+          "arn:aws:batch:${var.aws_region}:${local.account_id}:job/*"
+        ]
+      },
+      {
         "Effect" : "Allow",
         "Action" : [
           "sns:ListTopics"
