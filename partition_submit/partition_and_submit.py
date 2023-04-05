@@ -70,7 +70,7 @@ def create_directories():
     processor.joinpath("scratch", "locks").mkdir(parents=True, exist_ok=True)
     processor.joinpath("scratch", "quarantine").mkdir(parents=True, exist_ok=True)    
 
-def copy_to_efs(datadir, partitions):
+def copy_to_efs(datadir, partitions, logger):
     """Copy DLC text files and coordination JSON files to EFS.
     
     Assumption: The number of JSON files is same for all components
@@ -89,13 +89,17 @@ def copy_to_efs(datadir, partitions):
         txts = [ txt_file for txt_list in partitions[ptype]["downloader_txt"] for txt_file in txt_list  ]
         for txt in txts:
             shutil.copyfile(f"{datadir}/{txt}", f"{EFS_DIRS['downloader']}/{txt}")
+            logger.info(f"Copied to EFS: {txt}.")
     
         # Copy JSON files to appropriate directories 
         for i in range(len(partitions[ptype]["downloader"])):
             shutil.copyfile(f"{datadir}/{partitions[ptype]['downloader'][i]}", f"{EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}")
+            logger.info(f"Copied to EFS: {datadir}/{partitions[ptype]['downloader'][i]}.")
             if ptype == "unmatched": continue
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")  
+            logger.info(f"Copied to EFS: {datadir}/{partitions[ptype]['combiner'][i]}.")
+            shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")
+            logger.info(f"Copied to EFS: {datadir}/{partitions[ptype]['processor'][i]}.")
             
 def delete_s3(dataset, prefix, downloads_list, logger):
     """Delete DLC-created download lists from S3 bucket."""
@@ -290,8 +294,7 @@ def event_handler(event, context):
         print_jobs(partitions, logger)
         
         # Copy S3 text files and /tmp JSON files to EFS
-        copy_to_efs(datadir, partitions)
-        logger.info("Coordinating files copied to EFS directories.")
+        copy_to_efs(datadir, partitions, logger)
         
         # Create and submit job arrays
         submit = Submit(config, dataset, datadir)
