@@ -74,14 +74,14 @@ class Partition:
         """
         
         self.dataset = dataset
+        self.datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
         self.dlc_lists = dlc_lists
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
-        self.num_lic_avail = 5
-        # try:
-        #     self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
-        # except botocore.exceptions.ClientError as e:
-        #     raise e
+        try:
+            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+        except botocore.exceptions.ClientError as e:
+            raise e
         self.obpg_files = {
             "quicklook": [],
             "refined": []
@@ -541,8 +541,7 @@ class Partition:
             combiner_jobs = []
             processor_jobs = []
             for jobs in job_array:
-                datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
-                txt_file = f"{self.dataset}_{datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{datetime_str}_{i}_{self.unique_id}.txt"
+                txt_file = f"{self.dataset}_{self.datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{self.datetime_str}_{i}_{self.unique_id}.txt"
                 with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                     for job in jobs:
                         fh.write(f"{job}\n")
@@ -568,8 +567,8 @@ class Partition:
         i = 0
         filename_list = []
         for json_data in component_json:
-            filename_list.append(f"{filename}_{i}_{self.unique_id}.json")
-            with open(self.out_dir.joinpath(f"{filename}_{i}_{self.unique_id}.json"), 'w') as jf:
+            filename_list.append(f"{filename}_{self.datetime_str}_{i}_{self.unique_id}.json")
+            with open(self.out_dir.joinpath(f"{filename}_{self.datetime_str}_{i}_{self.unique_id}.json"), 'w') as jf:
                 json.dump(json_data, jf, indent=2)
             i += 1
         return filename_list    
@@ -582,8 +581,7 @@ class Partition:
         total_downloads = 0
         for job_array in self.unmatched:
             txt_files = []
-            datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
-            txt_file = f"{self.dataset}_unmatched_{datetime_str}_{i}_{self.unique_id}.txt"
+            txt_file = f"{self.dataset}_unmatched_{self.datetime_str}_{i}_{self.unique_id}.txt"
             with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                 for job in job_array:
                     fh.write(f"{job}\n")
