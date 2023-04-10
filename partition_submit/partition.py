@@ -77,10 +77,11 @@ class Partition:
         self.dlc_lists = dlc_lists
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
-        try:
-            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
-        except botocore.exceptions.ClientError as e:
-            raise e
+        self.num_lic_avail = 5
+        # try:
+        #     self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+        # except botocore.exceptions.ClientError as e:
+        #     raise e
         self.obpg_files = {
             "quicklook": [],
             "refined": []
@@ -404,7 +405,7 @@ class Partition:
             if len(l) > 0: 
                 self.obpg_files[obpg_key][-1].append(l)
             else:
-                self.obpg_files[obpg_key].pop(-1)
+                if len(self.obpg_files[obpg_key]) > 0: self.obpg_files[obpg_key].pop(-1)
         
     def store_sst_only(self):
         """Store refined SST files in the download lists S3 bucket under
