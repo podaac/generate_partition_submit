@@ -301,7 +301,7 @@ def event_handler(event, context):
     
     # Partition
     try:
-        partition = Partition(dataset, download_lists, datadir, prefix, config["threshold"], logger)
+        partition = Partition(dataset, download_lists, datadir, prefix, config["threshold_quicklook"], config["threshold_refined"], logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail}.")

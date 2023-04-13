@@ -59,7 +59,8 @@ class Partition:
     # Constants
     BATCH_SIZE = 10
     
-    def __init__(self, dataset, dlc_lists, out_dir, prefix, threshold, logger):
+    def __init__(self, dataset, dlc_lists, out_dir, prefix, threshold_quicklook,
+                 threshold_refined, logger):
         """
         Attributes
         ----------
@@ -78,11 +79,10 @@ class Partition:
         self.dlc_lists = dlc_lists
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
-        self.num_lic_avail = 5
-        # try:
-        #     self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
-        # except botocore.exceptions.ClientError as e:
-        #     raise e
+        try:
+            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+        except botocore.exceptions.ClientError as e:
+            raise e
         self.obpg_files = {
             "quicklook": [],
             "refined": []
@@ -92,7 +92,8 @@ class Partition:
         self.sst_dict = {}
         self.sst_only = []
         self.sst_process = []
-        self.threshold = threshold
+        self.threshold_quicklook = threshold_quicklook
+        self.threshold_refined = threshold_refined
         self.unmatched = []
         
     def partition_downloads(self, region, account, prefix):
@@ -114,7 +115,7 @@ class Partition:
             if self.sst_dict: 
                 self.chunk_downloads_job_array()
                 
-                # Store unmatched refined SST files for later processoing
+                # Store unmatched refined SST files for later processing                 
                 if len(self.sst_only) > 0: 
                     self.logger.info("Unmatched refined SST files detected.")
                     self.store_sst_only()
@@ -165,9 +166,10 @@ class Partition:
                 self.logger.error(f"Download list creator txt could not be found: {s3_url}.")
             
         # Load refined SST files
-        sst_process = self.load_refined_sst()
+        sst_process = self.load_holding_tank_sst()
         self.sst_process = sst_process    # Track for later
-        downloads.extend(sst_process)
+        downloads.extend(sst_process)                
+        downloads = list(set(downloads))   # Remove duplicates
         
         # Do not continuing processing if there are no downloads
         if len(downloads) == 0:
@@ -180,9 +182,9 @@ class Partition:
         refined = [ dl for dl in downloads if not "NRT" in dl ]
         self.group_downloads(refined, "refined")
         
-    def load_refined_sst(self):
-        """Load refined SST files stored for download that are older than
-        the threshold attribute.
+    def load_holding_tank_sst(self):
+        """Load SST files stored for download that are older than the threshold 
+        attributes.
         
         Returns list of downloads.
         """
@@ -199,11 +201,15 @@ class Partition:
             self.logger.info("No files were found in the holding tank.")
             return downloads
         if len(response["Contents"]) > 0:
-            threshold_time = datetime.datetime.utcnow() - datetime.timedelta(days=self.threshold)
-            json_files = list(filter(lambda json_file: self.threshold_filter(json_file, threshold_time), response["Contents"]))
+            quicklook_threshold_time = datetime.datetime.utcnow() - datetime.timedelta(hours=self.threshold_quicklook)
+            refined_threshold_time = datetime.datetime.utcnow() - datetime.timedelta(days=self.threshold_refined)
+            
+            quicklook_json_files = list(filter(lambda json_file: self.threshold_filter(json_file, "quicklook", quicklook_threshold_time), response["Contents"]))
+            refined_json_files = list(filter(lambda json_file: self.threshold_filter(json_file, "refined", refined_threshold_time), response["Contents"]))
             
         # Try load file data
         s3_url = f"s3://{self.prefix}-download-lists"
+        json_files = quicklook_json_files + refined_json_files
         for json_file in json_files:
             try:
                 with fsspec.open(f"{s3_url}/{json_file['Key']}", mode='r') as fh:
@@ -218,11 +224,11 @@ class Partition:
         
         return downloads
         
-    def threshold_filter(self, json_file, threshold_time):
+    def threshold_filter(self, json_file, ptype, threshold_time):
         """Filter json_files based on threshold value."""
         
-        json_time = datetime.datetime.strptime(json_file["Key"].split('/')[-1].split('.')[0], "%Y%m%dT%H%M%S")
-        if json_time < threshold_time:    # All JSON files older than threshold
+        json_time = datetime.datetime.strptime(json_file["Key"].split('/')[-1].split('_')[0].split('.')[0], "%Y%m%dT%H%M%S")        
+        if (ptype in json_file["Key"]) and (json_time <= threshold_time):    # All JSON files older than threshold
             return True
         else:
             return False       
@@ -402,9 +408,10 @@ class Partition:
                 
                 if "oc_file" in ptype_dict[sst]: 
                     l.append(ptype_dict[sst]["oc_file"])
-                    
+                
+                # Save sst files with no matching night or day file(s) to place in holding tank    
                 if ("sst34_file" not in ptype_dict[sst]) and ("oc_file" not in ptype_dict[sst]):
-                    if ("NRT" not in sst) and (sst not in self.sst_process):    # Only applies to refined files
+                    if sst not in self.sst_process:
                         self.sst_only.append(sst)
                         l.remove(sst)   # Remove from list so not submitted as Batch job
             
@@ -415,29 +422,41 @@ class Partition:
                 if len(self.obpg_files[obpg_key]) > 0: self.obpg_files[obpg_key].pop(-1)  
         
     def store_sst_only(self):
-        """Store refined SST files in the download lists S3 bucket under
-        the holding_tank/dataset key.
+        """Store SST files in the download lists S3 bucket under the 
+        holding_tank/dataset key.
         
         SST files are stored in JSON files organized by date and hour. This 
         allows the Generate workflow to process SST files on an hourly basis
         which chunks up the processing.
         """
         
+        # Sort files
+        quicklook_sst_only = [ sst for sst in self.sst_only if "NRT" in sst ]
+        refined_sst_only = [ sst for sst in self.sst_only if "NRT" not in sst ]        
+        
         # JSON file name
-        json_file = f"{datetime.datetime.utcnow().strftime('%Y%m%dT%H0000')}.json"
+        date_str = datetime.datetime.utcnow().strftime('%Y%m%dT%H0000')
+        quicklook_json_file = f"{date_str}_quicklook.json"
+        refined_json_file = f"{date_str}_refined.json"
         
-        # Determine if file exists
+        # Quicklook
         s3_client = boto3.client("s3")
-        json_file_exists = self.get_s3_json_file(s3_client, json_file)
+        if len(quicklook_sst_only) > 0:
+            quicklook_exists = self.get_s3_json_file(s3_client, quicklook_json_file)
+            if quicklook_exists:
+                self.generate_json(self.out_dir.joinpath(quicklook_json_file), "a", quicklook_sst_only)
+            else:
+                self.generate_json(self.out_dir.joinpath(quicklook_json_file), "w", quicklook_sst_only)
+            self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(quicklook_json_file))     
         
-        # Modify file to include new SST only files
-        if json_file_exists:
-            self.generate_json(self.out_dir.joinpath(json_file), "a")
-        else:
-            self.generate_json(self.out_dir.joinpath(json_file), "w")
-            
-        # Upload file to S3 holding tank
-        self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(json_file))
+        # Refined
+        if len(refined_sst_only) > 0:
+            refined_exists = self.get_s3_json_file(s3_client, refined_json_file)
+            if refined_exists:
+                self.generate_json(self.out_dir.joinpath(refined_json_file), "a", refined_sst_only)
+            else:
+                self.generate_json(self.out_dir.joinpath(refined_json_file), "w", refined_sst_only)
+            self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(refined_json_file))
         
     def get_s3_json_file(self, s3_client, json_file):
         """Check if JSON file exists and download it if it does.
@@ -456,18 +475,18 @@ class Partition:
                 raise e
         return True
     
-    def generate_json(self, json_file, mode):
+    def generate_json(self, json_file, mode, sst_only):
         """Either create or modify JSON file to store refined SST files."""
         
         # Append to old file if it exists
         if mode == "a":
             with open(json_file) as jf:
-                self.sst_only.extend(json.load(jf))
-                self.sst_only = [*set(self.sst_only)]    # Remove any duplicates
-        
+                sst_only.extend(json.load(jf))
+                sst_only = [*set(sst_only)]    # Remove any duplicates
+                        
         # Write data out
         with open(json_file, mode="w") as jf:
-            json.dump(self.sst_only, jf, indent=2)
+            json.dump(sst_only, jf, indent=2)
             
     def upload_to_holding_tank(self, s3_client, json_file):
         """Upload JSON file to S3 holding tank organized by dataset."""
