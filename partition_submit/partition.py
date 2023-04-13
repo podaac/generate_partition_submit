@@ -78,10 +78,11 @@ class Partition:
         self.dlc_lists = dlc_lists
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
-        try:
-            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
-        except botocore.exceptions.ClientError as e:
-            raise e
+        self.num_lic_avail = 5
+        # try:
+        #     self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+        # except botocore.exceptions.ClientError as e:
+        #     raise e
         self.obpg_files = {
             "quicklook": [],
             "refined": []
@@ -389,23 +390,29 @@ class Partition:
         SST3/4 and OC files."""
         
         self.obpg_files[obpg_key].append([])
-        for sst_chunk in sst_keys:   
+        for sst_chunk in sst_keys:
+               
             l = []
             for sst in sst_chunk:
+                
                 l.append(sst)
+                
                 if "sst34_file" in ptype_dict[sst]: 
                     l.append(ptype_dict[sst]["sst34_file"])
-                elif "oc_file" in ptype_dict[sst]: 
+                
+                if "oc_file" in ptype_dict[sst]: 
                     l.append(ptype_dict[sst]["oc_file"])
-                else:
-                    if not "NRT" in sst and not sst in self.sst_process:    # Only applies to refined files
+                    
+                if ("sst34_file" not in ptype_dict[sst]) and ("oc_file" not in ptype_dict[sst]):
+                    if ("NRT" not in sst) and (sst not in self.sst_process):    # Only applies to refined files
                         self.sst_only.append(sst)
                         l.remove(sst)   # Remove from list so not submitted as Batch job
+            
             # Add files to submit as jobs or remove placeholder list if none are present
             if len(l) > 0: 
                 self.obpg_files[obpg_key][-1].append(l)
             else:
-                if len(self.obpg_files[obpg_key]) > 0: self.obpg_files[obpg_key].pop(-1)
+                if len(self.obpg_files[obpg_key]) > 0: self.obpg_files[obpg_key].pop(-1)  
         
     def store_sst_only(self):
         """Store refined SST files in the download lists S3 bucket under
