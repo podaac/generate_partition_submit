@@ -214,8 +214,9 @@ class Partition:
             try:
                 with fsspec.open(f"{s3_url}/{json_file['Key']}", mode='r') as fh:
                     downloads.extend(json.load(fh))
+                self.logger.info(f"Loaded SST JSON file: {json_file['Key']}")
                 s3_client.delete_object(Bucket=f"{self.prefix}-download-lists", Key=json_file["Key"])
-                self.logger.info(f"Loaded and deleted refined SST JSON file: {json_file['Key']}")
+                self.logger.info(f"Deleted SST JSON file: {json_file['Key']}")
             except botocore.exceptions.ClientError as e:    # Delete
                 raise e
             except Exception as e:
@@ -227,11 +228,14 @@ class Partition:
     def threshold_filter(self, json_file, ptype, threshold_time):
         """Filter json_files based on threshold value."""
         
-        json_time = datetime.datetime.strptime(json_file["Key"].split('/')[-1].split('_')[0].split('.')[0], "%Y%m%dT%H%M%S")        
-        if (ptype in json_file["Key"]) and (json_time <= threshold_time):    # All JSON files older than threshold
-            return True
+        if (ptype in json_file["Key"]):
+            json_time = datetime.datetime.strptime(json_file["Key"].split('/')[-1].split('_')[0].split('.')[0], "%Y%m%dT%H%M%S")
+            if (json_time <= threshold_time):    # All JSON files older than threshold
+                return True
+            else:
+                return False
         else:
-            return False       
+            return False  
         
     def group_downloads(self, downloads, processing_type):
         """Match SST files to appropriate SST3/4 or OC files.
@@ -416,10 +420,8 @@ class Partition:
                         l.remove(sst)   # Remove from list so not submitted as Batch job
             
             # Add files to submit as jobs or remove placeholder list if none are present
-            if len(l) > 0: 
-                self.obpg_files[obpg_key][-1].append(l)
-            else:
-                if len(self.obpg_files[obpg_key]) > 0: self.obpg_files[obpg_key].pop(-1)  
+            if len(l) > 0:
+                self.obpg_files[obpg_key][-1].append(l) 
         
     def store_sst_only(self):
         """Store SST files in the download lists S3 bucket under the 
