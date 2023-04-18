@@ -322,18 +322,23 @@ def event_handler(event, context):
         submit = Submit(config, dataset, datadir)
         job_list = submit.create_jobs(partitions, prefix, partition.unique_id)
         try:
-            job_ids, job_names = submit.submit_jobs(job_list, logger)
-            for i in range(len(job_ids)):
-                logger.info(f"Job executing: {job_names[i]} {job_ids[i]}")
+            submit.submit_jobs(job_list, logger)
+            for i in range(len(submit.job_ids)):
+                for j in range(len(submit.job_ids[i])):
+                    if len(submit.job_names[i][j]) == 1:
+                        job_name = submit.job_names[i]
+                    else:
+                        job_name = submit.job_names[i][j]
+                    logger.info(f"Job executing: {job_name} {submit.job_ids[i][j]}")
         except botocore.exceptions.ClientError as e:
-            cancel_jobs(job_ids, job_names, logger)
+            cancel_jobs(submit.job_ids, submit.job_names, logger)
             handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
         
-        # Delete download text file lists from S3 bucket
-        try:
-            delete_s3(dataset, prefix, download_lists, logger)
-        except botocore.exceptions.ClientError as e:
-            handle_error(e, partition.unique_id, prefix, dataset, logger)
+        # # Delete download text file lists from S3 bucket
+        # try:
+        #     delete_s3(dataset, prefix, download_lists, logger)
+        # except botocore.exceptions.ClientError as e:
+        #     handle_error(e, partition.unique_id, prefix, dataset, logger)
         
     else:
         if partition.num_lic_avail < 2:
