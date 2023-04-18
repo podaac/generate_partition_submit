@@ -201,15 +201,16 @@ class Partition:
             self.logger.info("No files were found in the holding tank.")
             return downloads
         if len(response["Contents"]) > 0:
-            quicklook_threshold_time = datetime.datetime.utcnow() - datetime.timedelta(hours=self.threshold_quicklook)
+            # quicklook_threshold_time = datetime.datetime.utcnow() - datetime.timedelta(hours=self.threshold_quicklook)
             refined_threshold_time = datetime.datetime.utcnow() - datetime.timedelta(days=self.threshold_refined)
             
-            quicklook_json_files = list(filter(lambda json_file: self.threshold_filter(json_file, "quicklook", quicklook_threshold_time), response["Contents"]))
+            # quicklook_json_files = list(filter(lambda json_file: self.threshold_filter(json_file, "quicklook", quicklook_threshold_time), response["Contents"]))
             refined_json_files = list(filter(lambda json_file: self.threshold_filter(json_file, "refined", refined_threshold_time), response["Contents"]))
             
         # Try load file data
         s3_url = f"s3://{self.prefix}-download-lists"
-        json_files = quicklook_json_files + refined_json_files
+        # json_files = quicklook_json_files + refined_json_files
+        json_files = refined_json_files
         for json_file in json_files:
             try:
                 with fsspec.open(f"{s3_url}/{json_file['Key']}", mode='r') as fh:
@@ -415,7 +416,7 @@ class Partition:
                 
                 # Save sst files with no matching night or day file(s) to place in holding tank    
                 if ("sst34_file" not in ptype_dict[sst]) and ("oc_file" not in ptype_dict[sst]):
-                    if sst not in self.sst_process:
+                    if ("NRT" not in sst) and (sst not in self.sst_process):    # Only applies to refined
                         self.sst_only.append(sst)
                         l.remove(sst)   # Remove from list so not submitted as Batch job
             
@@ -435,23 +436,23 @@ class Partition:
         """
         
         # Sort files
-        quicklook_sst_only = [ sst for sst in self.sst_only if "NRT" in sst ]
+        # quicklook_sst_only = [ sst for sst in self.sst_only if "NRT" in sst ]
         refined_sst_only = [ sst for sst in self.sst_only if "NRT" not in sst ]        
         
         # JSON file name
         date_str = datetime.datetime.utcnow().strftime('%Y%m%dT%H0000')
-        quicklook_json_file = f"{date_str}_quicklook.json"
+        # quicklook_json_file = f"{date_str}_quicklook.json"
         refined_json_file = f"{date_str}_refined.json"
         
         # Quicklook
         s3_client = boto3.client("s3")
-        if len(quicklook_sst_only) > 0:
-            quicklook_exists = self.get_s3_json_file(s3_client, quicklook_json_file)
-            if quicklook_exists:
-                self.generate_json(self.out_dir.joinpath(quicklook_json_file), "a", quicklook_sst_only)
-            else:
-                self.generate_json(self.out_dir.joinpath(quicklook_json_file), "w", quicklook_sst_only)
-            self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(quicklook_json_file))     
+        # if len(quicklook_sst_only) > 0:
+        #     quicklook_exists = self.get_s3_json_file(s3_client, quicklook_json_file)
+        #     if quicklook_exists:
+        #         self.generate_json(self.out_dir.joinpath(quicklook_json_file), "a", quicklook_sst_only)
+        #     else:
+        #         self.generate_json(self.out_dir.joinpath(quicklook_json_file), "w", quicklook_sst_only)
+        #     self.upload_to_holding_tank(s3_client, self.out_dir.joinpath(quicklook_json_file))     
         
         # Refined
         if len(refined_sst_only) > 0:
