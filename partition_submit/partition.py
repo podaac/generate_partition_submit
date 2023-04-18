@@ -421,8 +421,10 @@ class Partition:
             
             # Add files to submit as jobs or remove placeholder list if none are present
             if len(l) > 0:
-                self.obpg_files[obpg_key][-1].append(l) 
-        
+                self.obpg_files[obpg_key][-1].append(l)
+            else:
+                self.obpg_files[obpg_key].pop()
+    
     def store_sst_only(self):
         """Store SST files in the download lists S3 bucket under the 
         holding_tank/dataset key.
