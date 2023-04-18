@@ -58,9 +58,14 @@ class Partition:
     
     # Constants
     BATCH_SIZE = 10
+    DOWNLOADS = {
+        "aqua": {"filename" : "AQUA_MODIS", "quicklook": "MODIS_AQUA_L2_SST_OBPG_QUICKLOOK", "refined": "MODIS_AQUA_L2_SST_OBPG_REFINED"},
+        "terra": {"filename" : "TERRA_MODIS", "quicklook": "MODIS_TERRA_L2_SST_OBPG_QUICKLOOK", "refined": "MODIS_TERRA_L2_SST_OBPG_REFINED"},
+        "viirs": {"filename" : "SNPP_VIIRS", "quicklook": "VIIRS_L2_SST_OBPG_QUICKLOOK", "refined": "VIIRS_L2_SST_OBPG_REFINED"}
+    }
     
-    def __init__(self, dataset, dlc_lists, out_dir, prefix, threshold_quicklook,
-                 threshold_refined, logger):
+    def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, prefix, 
+                 threshold_quicklook, threshold_refined, logger):
         """
         Attributes
         ----------
@@ -88,6 +93,7 @@ class Partition:
             "refined": []
         }
         self.out_dir = Path(out_dir)
+        self.downloads_dir = Path(downloads_dir)
         self.prefix = prefix
         self.sst_dict = {}
         self.sst_only = []
@@ -181,6 +187,9 @@ class Partition:
         
         refined = [ dl for dl in downloads if not "NRT" in dl ]
         self.group_downloads(refined, "refined")
+        
+        # Search and add matched SST3/4 and OC files to previous SST downloads
+        self.search_unmatched()
         
     def load_holding_tank_sst(self):
         """Load SST files stored for download that are older than the threshold 
@@ -340,6 +349,35 @@ class Partition:
             return True
         else:
             return False
+        
+    def search_unmatched(self):
+        """Determined if an SST file has been downlaoded for an OC or SST3/4 file."""
+        
+        # Locate previously downloaded SST files
+        for obpg_file in self.unmatched:
+            
+            if "NRT" in obpg_file:
+                processing_type = "quicklook"
+            else:
+                processing_type = "refined"
+            
+            ts = obpg_file.split('.')[5]
+            sst = self.downloads_dir.joinpath(self.DOWNLOADS[self.dataset][processing_type], f"{self.DOWNLOADS[self.dataset]['filename']}.{ts}.L2.SST.nc")
+            
+            if sst.exists():
+                if sst.name not in self.sst_dict[processing_type].keys():
+                    self.sst_dict[processing_type][sst.name] = {}
+                if "OC" in obpg_file: self.sst_dict[processing_type][sst.name]["oc_file"] = obpg_file
+                if "SST4" in obpg_file: self.sst_dict[processing_type][sst.name]["sst34_file"] = obpg_file
+                if "SST3" in obpg_file: self.sst_dict[processing_type][sst.name]["sst34_file"] = obpg_file = obpg_file
+
+        # Remove matched OC or SST3/4 files from unmatched list
+        for sst_dict in self.sst_dict.values():
+            for oc_sst34_dict in sst_dict.values():
+                if "oc_file" in oc_sst34_dict.keys(): 
+                    if oc_sst34_dict["oc_file"] in self.unmatched: self.unmatched.remove(oc_sst34_dict["oc_file"])
+                if "sst34_file" in oc_sst34_dict.keys(): 
+                    if oc_sst34_dict["sst34_file"] in self.unmatched: self.unmatched.remove(oc_sst34_dict["sst34_file"])
         
     def chunk_downloads_job_array(self):
         """Sort and partition downloads.
@@ -575,6 +613,7 @@ class Partition:
                 txt_file = f"{self.dataset}_{self.datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{self.datetime_str}_{i}_{self.unique_id}.txt"
                 with open(self.out_dir.joinpath(txt_file), 'w') as fh:
                     for job in jobs:
+                        if "https" not in job: continue    # Skip previously downloaded SST
                         fh.write(f"{job}\n")
                         total_downloads += 1
                 txt_files.append(txt_file)
