@@ -316,6 +316,15 @@ def event_handler(event, context):
     if partitions:
         print_jobs(partitions, logger)
         
+        # Return licenses if there are only unmatched downloads
+        if (len(partitions.keys()) == 1) and ("unmatched" in partitions.keys()):
+            try:
+                return_licenses(partition.unique_id, prefix, dataset, logger)
+            except botocore.exceptions.ClientError as e:
+                logger.error(f"Error trying to restore reserved IDL licenses.")
+                logger.error(e)
+                handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+        
         # Copy S3 text files and /tmp JSON files to EFS
         copy_to_efs(datadir, partitions, logger)
         

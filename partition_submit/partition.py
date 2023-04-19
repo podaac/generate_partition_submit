@@ -133,6 +133,16 @@ class Partition:
                 if jobs_exist:
                     job_partitions, downloads_total = self.write_json_files()
                     return job_partitions, downloads_total
+                elif len(self.unmatched) > 0:   # Only unmatched downloads to process
+                    downloader_json, total_downloads = self.write_unmatched_json()
+                    downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_unmatched")
+                    json_dict = {
+                        "unmatched": {
+                            "downloader": downloader_json_lists,
+                            "downloader_txt": downloader_json
+                        }
+                    } 
+                    return json_dict, total_downloads
                 else:
                     return {}, 0
             

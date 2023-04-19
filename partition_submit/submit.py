@@ -86,13 +86,14 @@ class Submit:
         # Add any unmatched downloads to the job list
         if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
         
-        # Create license job
-        self.license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
-                               self.config_data[f"license_returner_{self.dataset}"], 
-                               None, prefix)
-        self.license_job.update_command_prefix(prefix)
-        self.license_job.update_command_uid(str(unique_id))
-
+        # Create license job if more than just unmatched downloads to process
+        if (len(job_array_dict.keys()) > 1):
+            self.license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
+                                self.config_data[f"license_returner_{self.dataset}"], 
+                                None, prefix)
+            self.license_job.update_command_prefix(prefix)
+            self.license_job.update_command_uid(str(unique_id))
+        
         return job_list
     
     def append_unmatched_jobs(self, job_array_dict, prefix):
@@ -135,19 +136,20 @@ class Submit:
             self.job_ids.append(job_ids)
             self.job_names.append(job_names)
         
-        # Submit license jobs with dependencies on processor jobs
-        p_job_ids = []
-        if len(self.job_ids) == 1:   # Only one job per component
-            if len(self.job_ids[0]):
-                p_job_ids.append(self.job_ids[0][0])
+        # Submit license jobs with dependencies on processor jobs if one exists
+        if self.license_job:
+            p_job_ids = []
+            if len(self.job_ids) == 1:   # Only one job per component
+                if len(self.job_ids[0]):
+                    p_job_ids.append(self.job_ids[0][0])
+                else:
+                    p_job_ids.append(self.job_ids[0][2])
             else:
-                p_job_ids.append(self.job_ids[0][2])
-        else:
-            for i in range(len(self.job_ids) - 1):   # Exclude unmatched downloads
-                p_job_ids.append(self.job_ids[i][2])
+                for i in range(len(self.job_ids) - 1):   # Exclude unmatched downloads
+                    p_job_ids.append(self.job_ids[i][2])
 
-        self.job_ids.append([submit(self.license_job, p_job_ids, logger)])
-        self.job_names.append(self.license_job.job_name)
+            self.job_ids.append([submit(self.license_job, p_job_ids, logger)])
+            self.job_names.append(self.license_job.job_name)
                     
 def organize_jobs(job_dict, num_ql, num_r):
     """Organize JobArray jobs in job list by component and counter.
