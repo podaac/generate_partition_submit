@@ -470,6 +470,7 @@ class Partition:
             
             # Add files to submit as jobs or remove placeholder list if none are present
             if len(l) > 0:
+                if len(self.obpg_files[obpg_key]) == 0: self.obpg_files[obpg_key].append([])
                 self.obpg_files[obpg_key][-1].append(l)
             else:
                 self.obpg_files[obpg_key].pop()
