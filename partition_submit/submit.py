@@ -86,15 +86,16 @@ class Submit:
         # Add any unmatched downloads to the job list
         if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
         
-        # Create license job if more than just unmatched downloads to process
-        if (len(job_array_dict.keys()) > 1):
+        # Return job list if only unmatched downloads to process
+        if (len(job_array_dict.keys()) == 1) and ("unmatched" in job_array_dict.keys()):
+            return job_list
+        else:
             self.license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
                                 self.config_data[f"license_returner_{self.dataset}"], 
                                 None, prefix)
             self.license_job.update_command_prefix(prefix)
             self.license_job.update_command_uid(str(unique_id))
-        
-        return job_list
+            return job_list
     
     def append_unmatched_jobs(self, job_array_dict, prefix):
         """Append unmatched downloader jobs to job list."""
