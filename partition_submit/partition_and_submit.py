@@ -167,8 +167,9 @@ def return_licenses(unique_id, prefix, dataset, logger):
     ssm = boto3.client("ssm", region_name="us-west-2")
     try:
         # Get number of licenses that were used in the workflow
-        dataset_lic = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}-{unique_id}-lic")["Parameter"]["Value"]
-        floating_lic = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}-{unique_id}-floating")["Parameter"]["Value"]
+        quicklook_lic = check_existence(ssm, f"{prefix}-idl-{dataset}-{unique_id}-ql", logger)
+        refined_lic = check_existence(ssm, f"{prefix}-idl-{dataset}-{unique_id}-r", logger)
+        floating_lic = check_existence(ssm, f"{prefix}-idl-{dataset}-{unique_id}-floating", logger)
         
         # Wait until no other process is updating license info
         retrieving_lic =  ssm.get_parameter(Name=f"{prefix}-idl-retrieving-license")["Parameter"]["Value"]
@@ -181,21 +182,40 @@ def return_licenses(unique_id, prefix, dataset, logger):
         hold_license(ssm, prefix, "True", logger)  
         
         # Return licenses to appropriate parameters
-        write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger)
+        write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, dataset, logger)
         
         # Release hold as done updating
         hold_license(ssm, prefix, "False", logger)
         
         # Delete unique parameters
         response = ssm.delete_parameters(
-            Names=[f"{prefix}-idl-{dataset}-{unique_id}-lic",
-                    f"{prefix}-idl-{dataset}-{unique_id}-floating"]
+            Names=[f"{prefix}-idl-{dataset}-{unique_id}-ql",
+                   f"{prefix}-idl-{dataset}-{unique_id}-r",
+                   f"{prefix}-idl-{dataset}-{unique_id}-floating"]
         )
-        logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-lic")
-        logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-floating")
+        if quicklook_lic != 0: logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-ql")
+        if refined_lic != 0: logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-r")
+        if floating_lic != 0: logger.info(f"Deleted parameter: {prefix}-idl-{dataset}-{unique_id}-floating")
         
     except botocore.exceptions.ClientError as e:
         raise e
+    
+def check_existence(ssm, parameter_name, logger):
+        """Check existence of SSM parameter and return value if it exists.
+        
+        Returns 0 if does not exist.
+        """
+        
+        try:
+            parameter = ssm.get_parameter(Name=parameter_name)["Parameter"]["Value"]
+        except botocore.exceptions.ClientError as e:
+            if "(ParameterNotFound)" in str(e) :
+                parameter = 0
+            else:
+                logger.error(e)
+                logger.info("System exit.")
+                exit(1)
+        return parameter   
 
 def hold_license(ssm, prefix, on_hold, logger):
         """Put parameter license number ot use indicating retrieval in process."""
@@ -213,12 +233,12 @@ def hold_license(ssm, prefix, on_hold, logger):
             logger.error(f"Could not {hold_action} a hold on licenses...")
             raise e
         
-def write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger):
+def write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, dataset, logger):
     """Write license data to indicate number of licenses ready to be used."""
     
     try:
         current = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}")["Parameter"]["Value"]
-        total = int(dataset_lic) + int(current)
+        total = int(quicklook_lic) + int(refined_lic) + int(current)
         response = ssm.put_parameter(
             Name=f"{prefix}-idl-{dataset}",
             Type="String",
@@ -235,8 +255,8 @@ def write_licenses(ssm, dataset_lic, floating_lic, prefix, dataset, logger):
             Tier="Standard",
             Overwrite=True
         )
-        logger.info(f"Wrote {dataset_lic} license(s) to {dataset}.")
-        logger.info(f"Wrote {floating_lic} license(s)to floating.")
+        logger.info(f"Wrote {int(quicklook_lic) + int(refined_lic)} licenses to {dataset}.")
+        logger.info(f"Wrote {floating_lic} license(s) to floating.")
     except botocore.exceptions.ClientError as e:
         logger.error(f"Could not return {dataset} and floating licenses...")
         raise e
@@ -305,7 +325,7 @@ def event_handler(event, context):
         partition = Partition(dataset, download_lists, datadir, downloads_dir, prefix, config["threshold_quicklook"], config["threshold_refined"], logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
-        logger.info(f"Number of licenses available: {partition.num_lic_avail}.")
+        logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
         handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
