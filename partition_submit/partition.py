@@ -85,9 +85,11 @@ class Partition:
         self.logger = logger
         self.unique_id = random.randint(1000, 9999)
         try:
-            self.num_lic_avail = get_num_lic_avil(dataset, self.unique_id, prefix, self.logger)
+            dataset_lic, floating_lic = get_num_lic_avail(dataset, prefix, self.logger)
         except botocore.exceptions.ClientError as e:
             raise e
+        self.num_lic_avail = dataset_lic
+        self.floating_lic_avail = floating_lic
         self.obpg_files = {
             "quicklook": [],
             "refined": []
@@ -106,7 +108,7 @@ class Partition:
         """Load all available downloads and partition them based on licenses avialable."""       
         
         # Check the number of available licenses
-        if self.num_lic_avail < 2:   # One license per processing type
+        if self.num_lic_avail + self.floating_lic_avail < 2:   # One license per processing type
             try:
                 self.update_queue(region, account, prefix)
             except botocore.exceptions.ClientError as e:
@@ -119,7 +121,10 @@ class Partition:
             
             # Partition downlaods by SST file timestamp
             if self.sst_dict: 
-                self.chunk_downloads_job_array()
+                quicklook_lic, refined_lic = self.chunk_downloads_job_array()
+                                
+                # Write out licenses reserved for workflow
+                write_workflow_license(prefix, self.dataset, quicklook_lic, refined_lic, self.floating_lic_avail, self.unique_id)
                 
                 # Store unmatched refined SST files for later processing                 
                 if len(self.sst_only) > 0: 
@@ -403,21 +408,21 @@ class Partition:
         
         # Chunk sst keys based on number of licenses available to form job arrays            
         if len(ql_sst_keys) == 0:
-            ql = 0
-            r = self.num_lic_avail
+            ql = 0 
+            r = self.num_lic_avail + self.floating_lic_avail
             chunked_r_keys = np.array_split(r_sst_keys, r)
             chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_r_keys:
                 self.chunk_and_match(sst, self.sst_dict["refined"], "refined")
         elif len(r_sst_keys) == 0:
-            ql = self.num_lic_avail
+            r = 0
+            ql = self.num_lic_avail + self.floating_lic_avail
             chunked_ql_keys = np.array_split(ql_sst_keys, ql)
             chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_ql_keys:
                 self.chunk_and_match(sst, self.sst_dict["quicklook"], "quicklook")
-            r = 0
         else:
-            ql = (self.num_lic_avail) // 2 + (self.num_lic_avail % 2)
+            ql = (self.num_lic_avail // 2) + (self.num_lic_avail % 2) + (self.floating_lic_avail)
             r = self.num_lic_avail // 2
             chunked_ql_keys = np.array_split(ql_sst_keys, ql)
             chunked_ql_keys = [ x for x in chunked_ql_keys if len(x) > 0 ]    # Remove possible empty lists
@@ -433,6 +438,8 @@ class Partition:
             self.unmatched.sort(reverse=True)
             batch = math.ceil(len(self.unmatched) / self.BATCH_SIZE)
             self.unmatched = np.array_split(self.unmatched, batch)
+            
+        return ql, r
             
     def chunk_and_match(self, sst, ptype_dict, obpg_key):
         """Chunk job array into jobs and then match SST files to OC or SST3/4."""
@@ -672,7 +679,7 @@ class Partition:
             downloader_json.append(txt_files)
         return downloader_json, total_downloads
         
-def get_num_lic_avil(dataset, unique_id, prefix, logger):
+def get_num_lic_avail(dataset, prefix, logger):
     """Get the number of IDL licenses available."""
     
     # Open connection to parameter store
@@ -688,7 +695,7 @@ def get_num_lic_avil(dataset, unique_id, prefix, logger):
     except botocore.exceptions.ClientError as e:
         raise e
         
-    # Indicate license is going to obtain
+    # Indicate license is going to be obtained
     hold_license(ssm, prefix, "True")
         
     # Determine number of licenses available
@@ -698,14 +705,15 @@ def get_num_lic_avil(dataset, unique_id, prefix, logger):
     if license_data["floating"] > 0:
         num_floating_avail += 1
         license_data["floating"] -= 1
-    # Only update license data if at least 2 license files are available
+        
+    # Remove licenses so that they are reserved
     if num_lic_avail + num_floating_avail >= 2:
-        write_license(ssm, prefix, dataset, license_data, num_lic_avail, num_floating_avail, unique_id)
+        write_reserved_license(prefix, dataset, license_data)
     
-    # Indicate done change license data
+    # Indicate done holding licenses
     hold_license(ssm, prefix, "False")
     
-    return num_lic_avail + num_floating_avail
+    return num_lic_avail, num_floating_avail
     
 def open_license(ssm, prefix, dataset):
     """Get parameter that indicates whether a license retrieval is already in 
@@ -733,41 +741,63 @@ def hold_license(ssm, prefix, on_hold):
         )
     except botocore.exceptions.ClientError as e:
         raise e
-
-def write_license(ssm, prefix, dataset, license_data, num_lic_avail, num_floating_avail, unique_id):
-    """Write license data to indicate number of licenses in use."""
+    
+def write_reserved_license(prefix, dataset, license_data):
+    """Write license data to reserve licenses."""
+    
+    # Open connection to parameter store
+    ssm = boto3.client("ssm")
     
     # Only write out unique license info if enough licenses are available
-    if num_lic_avail >= 2:    
-        try:
+    try:
+        response = ssm.put_parameter(
+            Name=f"{prefix}-idl-{dataset}",
+            Type="String",
+            Value=str(license_data[dataset]),
+            Tier="Standard",
+            Overwrite=True
+        )
+        response = ssm.put_parameter(
+            Name=f"{prefix}-idl-floating",
+            Type="String",
+            Value=str(license_data["floating"]),
+            Tier="Standard",
+            Overwrite=True
+        )
+    except botocore.exceptions.ClientError as e:
+        raise e
+
+def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, floating_lic, unique_id):
+    """Write license data to indicate number of licenses in use."""
+    
+    # Open connection to parameter store
+    ssm = boto3.client("ssm")
+    
+    # Only write out unique license info if enough licenses are available
+    try:
+        if quicklook_lic > 0:
             response = ssm.put_parameter(
-                Name=f"{prefix}-idl-{dataset}",
+                Name=f"{prefix}-idl-{dataset}-{unique_id}-ql",
                 Type="String",
-                Value=str(license_data[dataset]),
+                Value=str(quicklook_lic),
                 Tier="Standard",
                 Overwrite=True
             )
+        if refined_lic > 0:
             response = ssm.put_parameter(
-                Name=f"{prefix}-idl-floating",
+                Name=f"{prefix}-idl-{dataset}-{unique_id}-r",
                 Type="String",
-                Value=str(license_data["floating"]),
+                Value=str(refined_lic),
                 Tier="Standard",
                 Overwrite=True
             )
-            response = ssm.put_parameter(
-                Name=f"{prefix}-idl-{dataset}-{unique_id}-lic",
-                Type="String",
-                Value=str(num_lic_avail),
-                Tier="Standard",
-                Overwrite=True
-            )
+        if floating_lic > 0:
             response = ssm.put_parameter(
                 Name=f"{prefix}-idl-{dataset}-{unique_id}-floating",
                 Type="String",
-                Value=str(num_floating_avail),
+                Value=str(floating_lic),
                 Tier="Standard",
                 Overwrite=True
             )
-        except botocore.exceptions.ClientError as e:
-            raise e
-    
+    except botocore.exceptions.ClientError as e:
+        raise e
