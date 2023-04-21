@@ -770,6 +770,14 @@ def write_reserved_license(prefix, dataset, license_data):
 def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, floating_lic, unique_id):
     """Write license data to indicate number of licenses in use."""
     
+    # Deterime values to write
+    # Refined only
+    if quicklook_lic == 0:
+        refined_lic -= floating_lic
+    # All Quicklook cases
+    else:
+        quicklook_lic -= floating_lic
+    
     # Open connection to parameter store
     ssm = boto3.client("ssm")
     
