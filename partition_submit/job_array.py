@@ -69,6 +69,11 @@ class JobArray():
         
         self.command = list(map(lambda x: x.replace("unique_id", unique_id), self.command))
         
+    def update_command_ptype(self, ptype):
+        """Update uploader command with method parameters."""
+        
+        self.command = list(map(lambda x: x.replace("ptype", ptype), self.command))
+        
 def get_array_size(input_list):
     """Determines array size from contents of input list file.
     

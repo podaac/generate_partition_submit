@@ -53,7 +53,7 @@
         "cpu": "1",
         "memory": "256",
         "share_identifier": "generateaqualicense",
-        "command": [ "unique_id", "prefix", "aqua" ]
+        "command": [ "unique_id", "prefix", "aqua", "ptype" ]
     },
     "downloader_terra_quicklook" : {
         "queue": "generate-terra",
@@ -108,7 +108,7 @@
         "cpu": "1",
         "memory": "256",
         "share_identifier": "generateterralicense",
-        "command": [ "unique_id", "prefix", "terra" ]
+        "command": [ "unique_id", "prefix", "terra", "ptype" ]
     },
     "downloader_viirs_quicklook" : {
         "cpu": "5",
@@ -162,7 +162,7 @@
         "cpu": "1",
         "memory": "256",
         "share_identifier": "generateviirslicense",
-        "command": [ "unique_id", "prefix", "viirs" ]
+        "command": [ "unique_id", "prefix", "viirs", "ptype" ]
     },
     "downloader_aqua_unmatched" : {
         "cpu": "5",

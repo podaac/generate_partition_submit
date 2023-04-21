@@ -79,23 +79,23 @@ class Submit:
                     job_dict[ptype][component].append(job)
                     if ptype == "quicklook": num_ql +=1
                     if ptype == "refined": num_r += 1
-                 
+            # License returner job
+            if ptype != "unmatched":
+                license_job =  JobArray(self.dataset, "license-returner", "license-returner", None,
+                                self.config_data[f"license_returner_{self.dataset}"], 
+                                None, prefix)
+                license_job.update_command_prefix(prefix)
+                license_job.update_command_uid(str(unique_id))
+                license_job.update_command_ptype(ptype)
+                job_dict[ptype]["license"] = license_job
+                
         # Organize jobs
         job_list = organize_jobs(job_dict, num_ql, num_r)
         
         # Add any unmatched downloads to the job list
         if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
         
-        # Return job list if only unmatched downloads to process
-        if (len(job_array_dict.keys()) == 1) and ("unmatched" in job_array_dict.keys()):
-            return job_list
-        else:
-            self.license_job = JobArray(self.dataset, "license-returner", "license-returner", None,
-                                self.config_data[f"license_returner_{self.dataset}"], 
-                                None, prefix)
-            self.license_job.update_command_prefix(prefix)
-            self.license_job.update_command_uid(str(unique_id))
-            return job_list
+        return job_list
     
     def append_unmatched_jobs(self, job_array_dict, prefix):
         """Append unmatched downloader jobs to job list."""
@@ -136,21 +136,6 @@ class Submit:
                     raise error
             self.job_ids.append(job_ids)
             self.job_names.append(job_names)
-        
-        # Submit license jobs with dependencies on processor jobs if one exists
-        if self.license_job:
-            p_job_ids = []
-            if len(self.job_ids) == 1:   # Only one job per component
-                if len(self.job_ids[0]):
-                    p_job_ids.append(self.job_ids[0][0])
-                else:
-                    p_job_ids.append(self.job_ids[0][2])
-            else:
-                for i in range(len(self.job_ids) - 1):   # Exclude unmatched downloads
-                    p_job_ids.append(self.job_ids[i][2])
-
-            self.job_ids.append([submit(self.license_job, p_job_ids, logger)])
-            self.job_names.append(self.license_job.job_name)
                     
 def organize_jobs(job_dict, num_ql, num_r):
     """Organize JobArray jobs in job list by component and counter.
@@ -174,6 +159,7 @@ def organize_jobs(job_dict, num_ql, num_r):
     refined = np.empty(shape=((num_r//4), 4), dtype=object)
     for ptype, components in job_dict.items():
             for component, job_list in components.items():
+                if component == "license": continue
                 for job in job_list:
                     j = int(job.counter)
                     if ptype == "quicklook":
@@ -187,7 +173,18 @@ def organize_jobs(job_dict, num_ql, num_r):
                         if component == "processor": refined[j,2] = job 
                         if component == "uploader": refined[j,3] = job
     
-    job_list = quicklook.tolist() + refined.tolist()
+    # Append license returner jobs if applicable
+    dims = quicklook.shape
+    has_data = np.any(quicklook)
+    quicklook = quicklook.tolist()
+    if has_data: quicklook[dims[0]-1].append(job_dict["quicklook"]["license"])
+    
+    dims = refined.shape
+    has_data = np.any(refined)
+    refined = refined.tolist()
+    if has_data: refined[dims[0]-1].append(job_dict["refined"]["license"])  
+    
+    job_list = quicklook + refined
     return job_list
             
 def submit(job, job_id, logger=None):
