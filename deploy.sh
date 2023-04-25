@@ -16,5 +16,3 @@ response=$(aws lambda update-function-code --function-name $FUNCTION_NAME --imag
 aws lambda wait function-updated-v2 --function-name $FUNCTION_NAME
 
 echo "Container image has been deployed to Lambda."
-
-exit(0)
