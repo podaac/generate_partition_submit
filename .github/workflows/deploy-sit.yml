@@ -49,8 +49,11 @@ jobs:
       - name: Build and Push to AWS ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ secrets.ECR_REPO_URI }}
+          IMAGE_TAG: "latest"
         run: |
-          echo "REGISTRY: $REGISTRY"
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
       
       # # Set up TF_VAR environment variables
       # - name: TF_VAR values
