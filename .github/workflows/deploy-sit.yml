@@ -60,8 +60,7 @@ jobs:
 
       # Deploy Lambda Container Image
       - name: Deploy Container Image
-        run: |
-          ./deploy.sh 
+        run: ./deploy.sh ${PREFIX_ENV}-partition-submit $REGISTRY/$REPOSITORY:$IMAGE_TAG
       
       # # Set up TF_VAR environment variables
       # - name: TF_VAR values
