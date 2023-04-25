@@ -49,7 +49,7 @@ jobs:
       - name: Build and Push to AWS ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${{ secrets.ECR_REPO_URI }}
+          REPOSITORY: $PREFIX_ENV-partition-submit
           IMAGE_TAG: "latest"
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
