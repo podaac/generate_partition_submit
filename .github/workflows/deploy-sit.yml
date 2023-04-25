@@ -46,10 +46,12 @@ jobs:
       - name: Login to AWS ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+      - name: Define ECR repository name
+        run : |
+          echo "REPOSITORY=${PREFIX_ENV}-partition-submit" >> $GITHUB_ENV
       - name: Build and Push to AWS ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: ${PREFIX_ENV}-partition-submit
           IMAGE_TAG: "latest"
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
