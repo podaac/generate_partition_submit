@@ -44,19 +44,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_SERVICES_SIT }}
           aws-region: us-west-2
 
-      # Create ECR repository (if it does not exist)
+      # Login and define registry, repository, and tag names
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
       - name: Define ECR registry, repository, and image tag names
         run : |
           echo "REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "REPOSITORY=${PREFIX_ENV}-partition-submit" >> $GITHUB_ENV
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+
+      # Create ECR repository (if it does not exist)
       - name: Create AWS ECR Repository
         run: ./deploy-ecr.sh $REGISTRY $REPOSITORY
 
-      # Login, build, tag, and push Lambda container
-      - name: Login to AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      # Build and push Lambda container
       - name: Build and Push to AWS ECR
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
