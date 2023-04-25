@@ -73,6 +73,8 @@ jobs:
       # Deploy Terraform
       - name: Deploy Terraform
         working-directory: terraform/
+        env:
+          TF_LOG: "DEBUG"
         
         # Set TF_VAR environment variables, initialize and run terraform
         run: |
