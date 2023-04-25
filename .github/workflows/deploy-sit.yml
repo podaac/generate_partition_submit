@@ -40,8 +40,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_SERVICES_SIT }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_SERVICES_SIT }}
+          aws-access-key-id: ${{ secrets.ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
       # Login and define registry, repository, and tag names
@@ -73,8 +73,6 @@ jobs:
       # Deploy Terraform
       - name: Deploy Terraform
         working-directory: terraform/
-        env:
-          TF_LOG: "DEBUG"
         
         # Set TF_VAR environment variables, initialize and run terraform
         run: |
