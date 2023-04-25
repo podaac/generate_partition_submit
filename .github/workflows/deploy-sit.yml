@@ -43,8 +43,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_SERVICES_SIT }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_SERVICES_SIT }}
           aws-region: us-west-2
-          role-session-name: GitHubActions
-      - run: aws sts get-caller-identity
 
       # Login and define registry, repository, and tag names
       - name: Login to AWS ECR
