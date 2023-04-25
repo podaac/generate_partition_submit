@@ -81,9 +81,7 @@ jobs:
               -backend-config="key=partition_submit.tfstate" \
               -backend-config="region=${AWS_DEFAULT_REGION}"
 
-          terraform plan
-          terraform state list
-        #terraform apply -auto-approve
+          terraform apply -auto-approve
 
       # Deploy Lambda Container Image
       - name: Deploy Container Image
