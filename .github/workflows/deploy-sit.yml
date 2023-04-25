@@ -82,6 +82,7 @@ jobs:
               -backend-config="region=${AWS_DEFAULT_REGION}"
 
           terraform plan
+          terraform state list
         #terraform apply -auto-approve
 
       # Deploy Lambda Container Image
