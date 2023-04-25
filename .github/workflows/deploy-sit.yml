@@ -60,7 +60,8 @@ jobs:
 
       # Deploy Lambda Container Image
       - name: Deploy Container Image
-        run: aws lambda update-function-code --function-name ${PREFIX_ENV}-partition-submit --image-uri $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        run: |
+          ./deploy.sh 
       
       # # Set up TF_VAR environment variables
       # - name: TF_VAR values
