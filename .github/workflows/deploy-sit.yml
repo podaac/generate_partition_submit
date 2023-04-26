@@ -15,6 +15,7 @@ on:
 env:
   TARGET_ENV: 'SIT'
   PREFIX_ENV: 'service-generate-sit'
+  APP_NAME_ENV: 'partition-submit'
 
 jobs:
   build:
@@ -51,12 +52,12 @@ jobs:
       - name: Define ECR registry, repository, and image tag names
         run : |
           echo "REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
-          echo "REPOSITORY=${PREFIX_ENV}-partition-submit" >> $GITHUB_ENV
+          echo "REPOSITORY=${PREFIX_ENV}-${APP_NAME_ENV}" >> $GITHUB_ENV
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
 
       # Create ECR repository (if it does not exist)
       - name: Create AWS ECR Repository
-        run: ./deploy-ecr.sh $REGISTRY $REPOSITORY
+        run: deploy/deploy-ecr.sh $REGISTRY $REPOSITORY
 
       # Build and push Lambda container
       - name: Build and Push to AWS ECR
@@ -78,7 +79,7 @@ jobs:
         run: |
           terraform init -reconfigure \
               -backend-config="bucket=${PREFIX_ENV}-tf-state" \
-              -backend-config="key=partition_submit.tfstate" \
+              -backend-config="key=${APP_NAME_ENV}.tfstate" \
               -backend-config="region=${AWS_DEFAULT_REGION}"
 
           terraform plan
@@ -86,4 +87,4 @@ jobs:
 
       # Deploy Lambda Container Image
       - name: Deploy Container Image
-        run: ./deploy-lambda.sh ${PREFIX_ENV}-partition-submit $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        run: deploy/deploy-lambda.sh ${PREFIX_ENV}-partition-submit $REGISTRY/$REPOSITORY:$IMAGE_TAG
