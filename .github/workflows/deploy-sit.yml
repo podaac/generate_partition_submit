@@ -83,8 +83,7 @@ jobs:
               -backend-config="key=${APP_NAME_ENV}.tfstate" \
               -backend-config="region=${AWS_DEFAULT_REGION}"
 
-          terraform plan
-        # terraform apply -auto-approve
+          terraform apply -auto-approve
 
       # Deploy Lambda Container Image
       - name: Deploy Container Image
