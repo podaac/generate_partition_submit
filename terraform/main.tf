@@ -12,13 +12,13 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  # default_tags {
-  #   tags = local.default_tags
-  # }
+  default_tags {
+    tags = local.default_tags
+  }
   ignore_tags {
     key_prefixes = ["gsfc-ngap"]
   }
-  region  = var.aws_region
+  region = var.aws_region
 }
 
 # Data sources
@@ -28,12 +28,8 @@ data "aws_ecr_repository" "partition_submit" {
   name = "${var.prefix}-partition-submit"
 }
 
-data "aws_efs_access_points" "aws_efs_generate_ap" {
-  file_system_id = data.aws_efs_file_system.aws_efs_generate.id
-}
-
-data "aws_efs_file_system" "aws_efs_generate" {
-  creation_token = var.prefix
+data "aws_efs_access_point" "fsap_reporter" {
+  access_point_id = var.fsap_id
 }
 
 data "aws_kms_key" "aws_s3" {

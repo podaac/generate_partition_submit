@@ -54,6 +54,7 @@ jobs:
           echo "REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "REPOSITORY=${PREFIX_ENV}-${APP_NAME_ENV}" >> $GITHUB_ENV
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+          echo "TF_VAR_fsap_id=${{ secrets.FILE_SYSTEM_ACCESS_ID }}" >> $GITHUB_ENV
 
       # Create ECR repository (if it does not exist)
       - name: Create AWS ECR Repository

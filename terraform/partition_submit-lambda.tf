@@ -14,7 +14,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
     security_group_ids = data.aws_security_groups.vpc_default_sg.ids
   }
   file_system_config {
-    arn              = data.aws_efs_access_points.aws_efs_generate_ap.arns[0]
+    arn              = data.aws_efs_access_point.fsap_reporter.arn
     local_mount_path = "/mnt/data"
   }
 }
@@ -126,9 +126,15 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Effect" : "Allow",
         "Action" : [
           "elasticfilesystem:ClientMount",
-          "elasticfilesystem:ClientWrite"
+          "elasticfilesystem:ClientWrite",
+          "elasticfilesystem:DescribeMountTargets"
         ],
-        "Resource" : "${data.aws_efs_access_points.aws_efs_generate_ap.arns[0]}"
+        "Resource" : "${data.aws_efs_access_point.fsap_reporter.file_system_arn}"
+        "Condition" : {
+          "StringEquals" : {
+            "elasticfilesystem:AccessPointArn" : "${data.aws_efs_access_point.fsap_reporter.arn}"
+          }
+        }
       },
       {
         "Sid" : "AllowListBucket",
