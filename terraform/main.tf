@@ -28,7 +28,7 @@ data "aws_ecr_repository" "partition_submit" {
   name = "${var.prefix}-partition-submit"
 }
 
-data "aws_efs_access_point" "fsap_reporter" {
+data "aws_efs_access_point" "fsap_ps" {
   access_point_id = var.fsap_id
 }
 
