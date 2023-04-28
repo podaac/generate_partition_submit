@@ -111,4 +111,4 @@ jobs:
 
       # Deploy Lambda Container Image
       - name: Deploy Container Image
-        run: deploy/deploy-lambda.sh ${PREFIX_ENV}-partition-submit $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        run: deploy/deploy-lambda.sh ${PREFIX_ENV}-${APP_NAME_ENV} $REGISTRY/$REPOSITORY:$IMAGE_TAG
