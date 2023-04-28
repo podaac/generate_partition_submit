@@ -161,7 +161,7 @@ def handle_error(error, unique_id, prefix, dataset, logger, partition=None, acco
     logger.error("System exiting.")
     sys.exit(1)
     
-def return_licenses(unique_id, prefix, dataset, logger):
+def return_licenses(unique_id, prefix, dataset, logger, partition=None):
     """Return licenses that were reserved for current workflow."""
     
     ssm = boto3.client("ssm", region_name="us-west-2")
@@ -182,7 +182,11 @@ def return_licenses(unique_id, prefix, dataset, logger):
         hold_license(ssm, prefix, "True", logger)  
         
         # Return licenses to appropriate parameters
-        write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, dataset, logger)
+        if (quicklook_lic == 0) and (refined_lic == 0) and (floating_lic == 0):    
+            # Indicates that no downloads were found and no licenses were reserved for processing type
+            write_licenses(ssm, partition.num_lic_avail, 0, partition.floating_lic_avail, prefix, dataset, logger)
+        else:
+            write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, dataset, logger)
         
         # Release hold as done updating
         hold_license(ssm, prefix, "False", logger)
@@ -375,4 +379,4 @@ def event_handler(event, context):
             logger.info(f"No available licenses. Any pending downloads have been written to the queue: {prefix}-pending-jobs.")
         else:
             logger.info("No downloads available to process.")
-            return_licenses(partition.unique_id, prefix, dataset, logger)
+            return_licenses(partition.unique_id, prefix, dataset, logger, partition)
