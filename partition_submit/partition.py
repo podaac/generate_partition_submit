@@ -65,7 +65,7 @@ class Partition:
     }
     
     def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, prefix, 
-                 threshold_quicklook, threshold_refined, logger):
+                 logger):
         """
         Attributes
         ----------
@@ -99,8 +99,6 @@ class Partition:
         self.prefix = prefix
         self.sst_dict = {}
         self.sst_process = []
-        self.threshold_quicklook = threshold_quicklook
-        self.threshold_refined = threshold_refined
         self.unmatched = []
         
     def partition_downloads(self, region, account, prefix):
