@@ -159,6 +159,12 @@ def handle_error(error, unique_id, prefix, dataset, logger, partition=None, acco
     # Send email
     notify(logger, "ERROR", error, type(error))
     logger.error("System exiting.")
+    
+    # Delete logger    
+    for handler in logger.handlers:
+        logger.removeHandler(handler) 
+        
+    # Exit
     sys.exit(1)
     
 def return_licenses(unique_id, prefix, dataset, logger, partition=None):
@@ -380,3 +386,7 @@ def event_handler(event, context):
         else:
             logger.info("No downloads available to process.")
             return_licenses(partition.unique_id, prefix, dataset, logger, partition)
+            
+    # Delete logger    
+    for handler in logger.handlers:
+        logger.removeHandler(handler) 
