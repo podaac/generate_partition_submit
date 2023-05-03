@@ -326,7 +326,7 @@ def event_handler(event, context):
     # Partition
     try:
         downloads_dir = EFS_DIRS["combiner"]
-        partition = Partition(dataset, download_lists, datadir, downloads_dir, prefix, config["threshold_quicklook"], config["threshold_refined"], logger)
+        partition = Partition(dataset, download_lists, datadir, downloads_dir, prefix, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
