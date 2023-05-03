@@ -98,7 +98,6 @@ class Partition:
         self.downloads_dir = Path(downloads_dir)
         self.prefix = prefix
         self.sst_dict = {}
-        self.sst_process = []
         self.unmatched = []
         
     def partition_downloads(self, region, account, prefix):
