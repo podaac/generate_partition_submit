@@ -159,7 +159,7 @@ class Partition:
                 MessageDeduplicationId=f"{prefix}-{self.dataset}-{self.unique_id}",
                 MessageGroupId = f"{prefix}-{self.dataset}"
             )
-            self.logger.info(f"Updated pending jobs queue: {self.dlc_lists}.")
+            self.logger.info(f"Updated {prefix}-pending-jobs-{self.dataset}.fifo queue: {self.dlc_lists}.")
         except botocore.exceptions.ClientError as e:
             raise e
         

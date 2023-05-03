@@ -112,7 +112,7 @@ class Submit:
                                         prefix))
         return unmatched
     
-    def submit_jobs(self, job_list, logger=None):
+    def submit_jobs(self, job_list):
         """Submit jobs to AWS Batch.
         
         Parameters
@@ -127,10 +127,10 @@ class Submit:
             for job in jobs:
                 try:
                     if len(job_ids) == 0:
-                        job_ids.append(submit(job, 0, logger))
+                        job_ids.append(submit(job, 0))
                         job_names.append(job.job_name)
                     else:
-                        job_ids.append(submit(job, job_ids[-1], logger))
+                        job_ids.append(submit(job, job_ids[-1]))
                         job_names.append(job.job_name)
                 except botocore.exceptions.ClientError as error:
                     raise error
@@ -187,7 +187,7 @@ def organize_jobs(job_dict, num_ql, num_r):
     job_list = quicklook + refined
     return job_list
             
-def submit(job, job_id, logger=None):
+def submit(job, job_id):
     """Submit job to AWS Batch.
     
     Raises: botocore.exceptions.ClientError
@@ -240,6 +240,5 @@ def submit(job, job_id, logger=None):
             )
     except botocore.exceptions.ClientError as error:
         raise error
-
-    if logger: logger.info(f"Job submitted: {response['jobName']}")
+    
     return response["jobId"]   # Job identifier

@@ -89,17 +89,17 @@ def copy_to_efs(datadir, partitions, logger):
         txts = [ txt_file for txt_list in partitions[ptype]["downloader_txt"] for txt_file in txt_list  ]
         for txt in txts:
             shutil.copyfile(f"{datadir}/{txt}", f"{EFS_DIRS['downloader']}/{txt}")
-            logger.info(f"Copied to EFS: {txt}.")
+            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{txt}.")
     
         # Copy JSON files to appropriate directories 
         for i in range(len(partitions[ptype]["downloader"])):
             shutil.copyfile(f"{datadir}/{partitions[ptype]['downloader'][i]}", f"{EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}")
-            logger.info(f"Copied to EFS: {datadir}/{partitions[ptype]['downloader'][i]}.")
+            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}.")
             if ptype == "unmatched": continue
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
-            logger.info(f"Copied to EFS: {datadir}/{partitions[ptype]['combiner'][i]}.")
+            logger.info(f"Copied to EFS: {EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}.")
             shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")
-            logger.info(f"Copied to EFS: {datadir}/{partitions[ptype]['processor'][i]}.")
+            logger.info(f"Copied to EFS: {EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}.")
             
 def delete_s3(dataset, prefix, downloads_list, logger):
     """Delete DLC-created download lists from S3 bucket."""
@@ -356,14 +356,14 @@ def event_handler(event, context):
         submit = Submit(config, dataset, datadir)
         job_list = submit.create_jobs(partitions, prefix, partition.unique_id)
         try:
-            submit.submit_jobs(job_list, logger)
+            submit.submit_jobs(job_list)
             for i in range(len(submit.job_ids)):
                 for j in range(len(submit.job_ids[i])):
                     if len(submit.job_names[i][j]) == 1:
                         job_name = submit.job_names[i]
                     else:
                         job_name = submit.job_names[i][j]
-                    logger.info(f"Job executing: {job_name} {submit.job_ids[i][j]}")
+                    logger.info(f"AWS Batch job submitted: {job_name} {submit.job_ids[i][j]}")
         except botocore.exceptions.ClientError as e:
             cancel_jobs(submit.job_ids, submit.job_names, logger)
             handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
@@ -376,7 +376,7 @@ def event_handler(event, context):
         
     else:
         if partition.num_lic_avail < 2:
-            logger.info(f"No available licenses. Any pending downloads have been written to the queue: {prefix}-pending-jobs.")
+            logger.info(f"No available licenses. Any pending downloads have been written to the queue: {prefix}-pending-jobs-{dataset}.fifo queue.")
         else:
             logger.info("No downloads available to process.")
             return_licenses(partition.unique_id, prefix, dataset, logger, partition)
