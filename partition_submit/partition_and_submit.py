@@ -96,7 +96,12 @@ def copy_to_efs(datadir, partitions, logger):
             shutil.copyfile(f"{datadir}/{download}", f"{EFS_DIRS['downloader']}/{download}")
             logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{download}.")
 
-        # Copy combiner and processor JSON files to appropriate directories 
+        # Copy combiner and processor JSON files to appropriate directories
+        
+        print()
+        print(json.dumps(partitions[ptype]["combiner"], indent=2))
+        print()
+         
         for i in range(len(partitions[ptype]["combiner"])):
             if ptype == "unmatched": continue
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
