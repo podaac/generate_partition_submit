@@ -73,7 +73,7 @@ def create_directories():
 def copy_to_efs(datadir, partitions, logger):
     """Copy DLC text files and coordination JSON files to EFS.
     
-    Assumption: The number of JSON files is same for all components
+    Assumption: The number of JSON files is same for the combiner and processor
     """
     
     # Create EFS directories if they don't exist
@@ -90,11 +90,14 @@ def copy_to_efs(datadir, partitions, logger):
         for txt in txts:
             shutil.copyfile(f"{datadir}/{txt}", f"{EFS_DIRS['downloader']}/{txt}")
             logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{txt}.")
-    
-        # Copy JSON files to appropriate directories 
-        for i in range(len(partitions[ptype]["downloader"])):
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['downloader'][i]}", f"{EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}.")
+            
+        # Copy downloader JSON files to the downloader directory
+        for download in partitions[ptype]["downloader"]:
+            shutil.copyfile(f"{datadir}/{download}", f"{EFS_DIRS['downloader']}/{download}")
+            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{download}.")
+
+        # Copy combiner and processor JSON files to appropriate directories 
+        for i in range(len(partitions[ptype]["combiner"])):
             if ptype == "unmatched": continue
             shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
             logger.info(f"Copied to EFS: {EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}.")
@@ -331,8 +334,9 @@ def event_handler(event, context):
     
     # Partition
     try:
-        downloads_dir = EFS_DIRS["combiner"]
-        partition = Partition(dataset, download_lists, datadir, downloads_dir, prefix, logger)
+        downloads_dir = pathlib.Path(EFS_DIRS["combiner"])
+        jobs_dir = pathlib.Path(EFS_DIRS["combiner"]).parent.joinpath("jobs")
+        partition = Partition(dataset, download_lists, pathlib.Path(datadir), downloads_dir, jobs_dir, prefix, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")

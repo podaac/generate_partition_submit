@@ -10,7 +10,8 @@ from collections import OrderedDict
 import datetime
 import json
 import math
-from pathlib import Path
+import os
+import pathlib
 import random
 import time
 
@@ -64,8 +65,8 @@ class Partition:
         "viirs": {"filename" : "SNPP_VIIRS", "quicklook": "VIIRS_L2_SST_OBPG_QUICKLOOK", "refined": "VIIRS_L2_SST_OBPG_REFINED"}
     }
     
-    def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, prefix, 
-                 logger):
+    def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, jobs_dir,
+                 prefix, logger):
         """
         Attributes
         ----------
@@ -94,8 +95,9 @@ class Partition:
             "quicklook": [],
             "refined": []
         }
-        self.out_dir = Path(out_dir)
-        self.downloads_dir = Path(downloads_dir)
+        self.out_dir = out_dir
+        self.downloads_dir = downloads_dir
+        self.jobs_dir = jobs_dir
         self.prefix = prefix
         self.sst_dict = {}
         self.unmatched = []
@@ -190,6 +192,9 @@ class Partition:
         
         # Search and add matched SST3/4 and OC files to previous SST downloads
         self.search_unmatched()
+        
+        # Load the combiner threshold file to try to process unmatched SST files
+        self.load_combiner_threshold_txt("quicklook")
         
     def threshold_filter(self, json_file, ptype, threshold_time):
         """Filter json_files based on threshold value."""
@@ -307,7 +312,7 @@ class Partition:
             return False
         
     def search_unmatched(self):
-        """Determined if an SST file has been downlaoded for an OC or SST3/4 file."""
+        """Determined if an SST file has been downloaded for an OC or SST3/4 file."""
         
         # Locate previously downloaded SST files
         for obpg_file in self.unmatched:
@@ -334,6 +339,36 @@ class Partition:
                     if oc_sst34_dict["oc_file"] in self.unmatched: self.unmatched.remove(oc_sst34_dict["oc_file"])
                 if "sst34_file" in oc_sst34_dict.keys(): 
                     if oc_sst34_dict["sst34_file"] in self.unmatched: self.unmatched.remove(oc_sst34_dict["sst34_file"])
+                    
+    def load_combiner_threshold_txt(self, processing_type):
+        """Load SST files that were not processed by the combiner because 
+        matching SST4 and/or OC files could not be found."""
+        
+        # Load in all threshold txt files for the current dataset
+        with os.scandir(self.jobs_dir) as dir_entries:
+            p_level = f"{self.dataset}_{processing_type}"
+            threshold_txts = [ pathlib.Path(txt) for txt in dir_entries if p_level in txt.name ]
+        
+        ssts = []    
+        for threshold_txt in threshold_txts:
+            self.logger.info(f"Reading in combiner threshold file from EFS: {threshold_txt}.")
+            with open(threshold_txt) as fh:
+                ssts.extend(fh.read().splitlines())
+        
+        # Determine if they have been matched previously and add to list if they haven't
+        sst_count = 0
+        for sst in ssts:
+            nrt_sst = f"{'.'.join(sst.split('.')[:-1])}.NRT.nc"
+            exists = list(filter(lambda key: sst in key or nrt_sst in key, self.sst_dict[processing_type].keys()))
+            if len(exists) > 0: continue
+            self.sst_dict[processing_type][sst] = {}
+            sst_count += 1
+        self.logger.info(f"Loaded {sst_count} SST files for processing.")
+            
+        # Delete threshold txt files
+        for threshold_txt in threshold_txts: 
+            threshold_txt.unlink()
+            self.logger.info(f"Deleted from EFS: {threshold_txt}.")
         
     def chunk_downloads_job_array(self):
         """Sort and partition downloads.
@@ -483,29 +518,33 @@ class Partition:
         processor_json = []
         total_downloads = 0
         for job_array in job_arrays:
+            
             txt_files = []
             combiner_jobs = []
             processor_jobs = []
             for jobs in job_array:
-                txt_file = f"{self.dataset}_{self.datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{self.datetime_str}_{i}_{self.unique_id}.txt"
-                with open(self.out_dir.joinpath(txt_file), 'w') as fh:
-                    for job in jobs:
-                        if "https" not in job: continue    # Skip previously downloaded SST
-                        fh.write(f"{job}\n")
-                        total_downloads += 1
-                txt_files.append(txt_file)
-                i += 1
+                # Only process files that haven't been downloaded
+                if len(jobs) > 1 and "https" in jobs[0]:                    
+                    txt_file = f"{self.dataset}_{self.datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{self.datetime_str}_{i}_{self.unique_id}.txt"
+                    with open(self.out_dir.joinpath(txt_file), 'w') as fh:
+                        for job in jobs:
+                            if "https" not in job: continue    # Skip previously downloaded SST
+                            fh.write(f"{job}\n")
+                            total_downloads += 1
+                    txt_files.append(txt_file)
+                    i += 1
                 if ptype == "quicklook":
                     combiner_jobs.append([job.split(' ')[0].split('/')[-1].replace(".NRT", "") for job in jobs])
                 else:
                     combiner_jobs.append([job.split(' ')[0].split('/')[-1] for job in jobs])
                 p_jobs = list(set([job.split(' ')[0].split('/')[-1].split('.')[1] for job in jobs]))
                 p_jobs.sort(reverse=True)
-                processor_jobs.append(p_jobs)
+                processor_jobs.append(p_jobs)             
+                
             combiner_json.append(combiner_jobs)
-            downloader_json.append(txt_files)
+            if len(txt_files) >= 1: downloader_json.append(txt_files)
             processor_json.append(processor_jobs)
-            
+        
         return combiner_json, downloader_json, processor_json, total_downloads
     
     def write_json(self, component_json, filename):
