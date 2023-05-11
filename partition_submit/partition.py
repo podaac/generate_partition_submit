@@ -363,7 +363,7 @@ class Partition:
             if len(exists) > 0: continue
             self.sst_dict[processing_type][sst] = {}
             sst_count += 1
-        self.logger.info(f"Loaded {sst_count} SST files for processing.")
+        self.logger.info(f"Loaded {sst_count} SST files that were not processed by the combiner.")
             
         # Delete threshold txt files
         for threshold_txt in threshold_txts: 
