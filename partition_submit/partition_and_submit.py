@@ -141,23 +141,26 @@ def get_logger():
     # Return logger
     return logger  
 
-def handle_error(error, unique_id, prefix, dataset, logger, partition=None, account=None, region=None):
+def handle_error(error, prefix, dataset, logger, unique_id=None, dlc_lists=None, account=None, region=None):
     """Print out error message, notify users, return licenses, and exit."""
     
     # Log error
     logger.error(f"Error encountered: {type(error)}.")
     logger.error(error)
     
-    # Send download txts to pending jobs queue if applicable
-    if partition:
-        partition.update_queue(region, account, prefix)   # Send txt files to queue
-    
-    # Return licenses
-    try:
-        return_licenses(unique_id, prefix, dataset, logger)
-    except botocore.exceptions.ClientError as e:
-        logger.error(f"Error trying to restore reserved IDL licenses.")
-        logger.error(e)
+    # Send download txts to pending jobs queue and return licenses
+    if unique_id:
+        if dlc_lists: 
+            update_queue(dlc_lists, dataset, unique_id, region, account, prefix, logger)
+        try:
+            return_licenses(unique_id, prefix, dataset, logger)
+        except botocore.exceptions.ClientError as e:
+            logger.error(f"Error trying to restore reserved IDL licenses.")
+            logger.error(e)
+    else:
+        if dlc_lists:
+            update_queue(dlc_lists, dataset, "0000", region, account, prefix, logger)
+        logger.info(f"Could not return any reserved IDL licenses. Please check the parameter store to ensure licenses are accounted for.")
     
     # Send email
     notify(logger, "ERROR", error, type(error))
@@ -169,6 +172,23 @@ def handle_error(error, unique_id, prefix, dataset, logger, partition=None, acco
         
     # Exit
     sys.exit(1)
+    
+def update_queue(dlc_lists, dataset, unique_id, region, account, prefix, logger):
+        """Add download lists to queue."""
+        
+        sqs = boto3.client("sqs")
+        
+        # Send to queue
+        try:
+            response = sqs.send_message(
+                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs-{self.dataset}.fifo",
+                MessageBody=json.dumps(dlc_lists),
+                MessageDeduplicationId=f"{prefix}-{dataset}-{unique_id}",
+                MessageGroupId = f"{prefix}-{dataset}"
+            )
+            logger.info(f"Updated {prefix}-pending-jobs-{dataset}.fifo queue: {dlc_lists}.")
+        except botocore.exceptions.ClientError as e:
+            raise e
     
 def return_licenses(unique_id, prefix, dataset, logger, partition=None):
     """Return licenses that were reserved for current workflow."""
@@ -342,9 +362,9 @@ def event_handler(event, context):
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
-        handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+        handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=download_lists, account=account, region=region)
     except FileNotFoundError as e:
-        handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+        handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=None, account=account, region=region)
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
@@ -357,7 +377,7 @@ def event_handler(event, context):
             except botocore.exceptions.ClientError as e:
                 logger.error(f"Error trying to restore reserved IDL licenses.")
                 logger.error(e)
-                handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+                handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
         
         # Copy S3 text files and /tmp JSON files to EFS
         copy_to_efs(datadir, partitions, logger)
@@ -376,13 +396,13 @@ def event_handler(event, context):
                     logger.info(f"AWS Batch job submitted: {job_name} {submit.job_ids[i][j]}")
         except botocore.exceptions.ClientError as e:
             cancel_jobs(submit.job_ids, submit.job_names, logger)
-            handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+            handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
         
         # # Delete download text file lists from S3 bucket
         # try:
         #     delete_s3(dataset, prefix, download_lists, logger)
         # except botocore.exceptions.ClientError as e:
-        #     handle_error(e, partition.unique_id, prefix, dataset, logger)
+        #     handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, partition=partition, account=account, region=region)
         
     else:
         if partition.num_lic_avail < 2:
