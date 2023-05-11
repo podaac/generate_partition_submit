@@ -99,15 +99,18 @@ def copy_to_efs(datadir, partitions, logger):
         # Copy combiner and processor JSON files to appropriate directories
         
         print()
+        print(ptype)
         print(json.dumps(partitions[ptype]["combiner"], indent=2))
         print()
-         
-        for i in range(len(partitions[ptype]["combiner"])):
-            if ptype == "unmatched": continue
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}.")
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}.")
+        
+        if ptype == "unmatched": 
+            continue    # Skip copying combiner and processor for unmatched downloads
+        else:
+            for i in range(len(partitions[ptype]["combiner"])):
+                shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
+                logger.info(f"Copied to EFS: {EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}.")
+                shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")
+                logger.info(f"Copied to EFS: {EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}.")
             
 def delete_s3(dataset, prefix, downloads_list, logger):
     """Delete DLC-created download lists from S3 bucket."""
