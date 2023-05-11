@@ -15,7 +15,7 @@
         "cpu": "8",
         "memory": "500",
         "share_identifier": "generateaquaquicklook",
-        "command": [ "300", "0", "yes", "MODIS_A", "QUICKLOOK", "-235", "input_list" ]
+        "command": [ "300", "10", "yes", "MODIS_A", "QUICKLOOK", "-235", "input_list" ]
     },
     "combiner_aqua_refined" : {
         "cpu": "8",
@@ -70,7 +70,7 @@
         "cpu": "8",
         "memory": "500",
         "share_identifier": "generateterraquicklook",
-        "command": [ "300", "0", "yes", "MODIS_T", "QUICKLOOK", "-235", "input_list" ]
+        "command": [ "300", "10", "yes", "MODIS_T", "QUICKLOOK", "-235", "input_list" ]
     },
     "combiner_terra_refined" : {
         "cpu": "8",
@@ -124,7 +124,7 @@
         "cpu": "8",
         "memory": "500",
         "share_identifier": "generateviirsquicklook",
-        "command": [ "300", "0", "yes", "VIIRS", "QUICKLOOK", "-235", "input_list" ]
+        "command": [ "300", "10", "yes", "VIIRS", "QUICKLOOK", "-235", "input_list" ]
     },
     "combiner_viirs_refined" : {
         "cpu": "8",
