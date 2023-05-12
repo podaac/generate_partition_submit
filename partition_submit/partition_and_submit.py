@@ -11,6 +11,7 @@ Command line arguments:
 """
 
 # Standard imports
+import glob
 import json
 import logging
 import pathlib
@@ -47,13 +48,11 @@ def create_directories():
     combiner.joinpath("downloads").mkdir(parents=True, exist_ok=True)
     combiner.joinpath("jobs").mkdir(parents=True, exist_ok=True)
     combiner.joinpath("logs").mkdir(parents=True, exist_ok=True)
-    combiner.joinpath("scratch").mkdir(parents=True, exist_ok=True)
     
     # Downloader
     downloader = EFS_DIR.joinpath("downloader")
     downloader.joinpath("lists").mkdir(parents=True, exist_ok=True)
     downloader.joinpath("logs").mkdir(parents=True, exist_ok=True)
-    downloader.joinpath("output").mkdir(parents=True, exist_ok=True)
     downloader.joinpath("scratch").mkdir(parents=True, exist_ok=True)
     
     # Processor
@@ -79,32 +78,28 @@ def copy_to_efs(datadir, partitions, logger):
     # Create EFS directories if they don't exist
     create_directories()
     
+    # Copy downloader TXT files
+    txts = glob.glob(f"{datadir}/*.txt")
+    for txt in txts:
+        filepath = pathlib.Path(txt)
+        shutil.copyfile(filepath, f"{EFS_DIRS['downloader']}/{filepath.name}")
+        logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{txt}.")
+    
+    # Copy input JSON files
     ptypes = []
     if "quicklook" in partitions.keys(): ptypes.append("quicklook")
     if "refined" in partitions.keys(): ptypes.append("refined")
     if "unmatched" in partitions.keys(): ptypes.append("unmatched")
-    
     for ptype in ptypes:
-        # Copy text files to downloader directory
-        txts = [ txt_file for txt_list in partitions[ptype]["downloader_txt"] for txt_file in txt_list  ]
-        for txt in txts:
-            shutil.copyfile(f"{datadir}/{txt}", f"{EFS_DIRS['downloader']}/{txt}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{txt}.")
-            
-        # Copy downloader JSON files to the downloader directory
-        for download in partitions[ptype]["downloader"]:
-            shutil.copyfile(f"{datadir}/{download}", f"{EFS_DIRS['downloader']}/{download}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{download}.")
-
-        # Copy combiner and processor JSON files to appropriate directories        
-        if ptype == "unmatched": 
-            continue    # Skip copying combiner and processor for unmatched downloads
-        else:
-            for i in range(len(partitions[ptype]["combiner"])):
-                shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
-                logger.info(f"Copied to EFS: {EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}.")
-                shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")
-                logger.info(f"Copied to EFS: {EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}.")
+        for jobs in partitions[ptype]:
+            if ptype == "unmatched": 
+                shutil.copyfile(f"{datadir}/{jobs}", f"{EFS_DIRS['downloader']}/{jobs}")
+                logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{jobs}.")
+            else:
+                for component, input_json in jobs.items():
+                    if component == "uploader": continue
+                    shutil.copyfile(f"{datadir}/{input_json}", f"{EFS_DIRS[component]}/{input_json}")
+                    logger.info(f"Copied to EFS: {EFS_DIRS[component]}/{input_json}.")
             
 def delete_s3(dataset, prefix, downloads_list, logger):
     """Delete DLC-created download lists from S3 bucket."""
@@ -313,19 +308,37 @@ def print_jobs(partitions, logger):
     """Print the number of jobs per component and processing type."""
     
     if "quicklook" in partitions.keys():
-        logger.info(f"Number of quicklook downloader jobs: {len(partitions['quicklook']['downloader'])}")
-        logger.info(f"Number of quicklook combiner jobs: {len(partitions['quicklook']['combiner'])}")
-        logger.info(f"Number of quicklook processor jobs: {len(partitions['quicklook']['processor'])}")
-        logger.info(f"Number of quicklook uploader jobs: {len(partitions['quicklook']['uploader'])}")
+        downloader_jobs, combiner_jobs, processor_jobs, uploader_jobs = sum_num_jobs(partitions['quicklook'])
+        logger.info(f"Number of quicklook downloader jobs: {downloader_jobs}")
+        logger.info(f"Number of quicklook combiner jobs: {combiner_jobs}")
+        logger.info(f"Number of quicklook processor jobs: {processor_jobs}")
+        logger.info(f"Number of quicklook uploader jobs: {uploader_jobs}")
         
     if "refined" in partitions.keys():
-        logger.info(f"Number of refined downloader jobs: {len(partitions['refined']['downloader'])}")
-        logger.info(f"Number of refined combiner jobs: {len(partitions['refined']['combiner'])}")
-        logger.info(f"Number of refined processor jobs: {len(partitions['refined']['processor'])}")
-        logger.info(f"Number of refined uploader jobs: {len(partitions['refined']['uploader'])}")
+        downloader_jobs, combiner_jobs, processor_jobs, uploader_jobs = sum_num_jobs(partitions['refined'])
+        logger.info(f"Number of refined downloader jobs: {downloader_jobs}")
+        logger.info(f"Number of refined combiner jobs: {combiner_jobs}")
+        logger.info(f"Number of refined processor jobs: {processor_jobs}")
+        logger.info(f"Number of refined uploader jobs: {uploader_jobs}")
     
     if "unmatched" in partitions.keys():
-        logger.info(f"Number of unmatched downloader jobs: {len(partitions['unmatched']['downloader'])}")
+        logger.info(f"Number of unmatched downloader jobs: {len(partitions['unmatched'])}")
+    
+def sum_num_jobs(partitions):
+    """Total the number of jobs for each component in the partitions argument."""
+    
+    downloader_jobs = 0
+    combiner_jobs = 0
+    processor_jobs = 0
+    uploader_jobs = 0
+    for jobs in partitions:
+        for component in jobs.keys():
+            if component == "downloader": downloader_jobs += 1
+            if component == "combiner": combiner_jobs += 1
+            if component == "processor": processor_jobs += 1
+            if component == "uploader": uploader_jobs += 1
+                
+    return downloader_jobs, combiner_jobs, processor_jobs, uploader_jobs
 
 def read_config(prefix):
     """Read in JSON config file for AWS Batch job submission."""
