@@ -3,19 +3,19 @@
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateaquaquicklook",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "no", "yes"]
     },
     "downloader_aqua_refined" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateaquarefined",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "no", "yes"]
     },
     "combiner_aqua_quicklook" : {
         "cpu": "8",
         "memory": "500",
         "share_identifier": "generateaquaquicklook",
-        "command": [ "300", "0", "yes", "MODIS_A", "QUICKLOOK", "-235", "input_list" ]
+        "command": [ "300", "10", "yes", "MODIS_A", "QUICKLOOK", "-235", "input_list" ]
     },
     "combiner_aqua_refined" : {
         "cpu": "8",
@@ -35,24 +35,42 @@
         "share_identifier": "generateaquarefined",
         "command": [ "300", "yes", "MODIS_A", "REFINED", "no", "-235", "input_list" ]
     },
+    "uploader_aqua_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateaquaquicklook",
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "aqua", "sit" ]
+    },
+    "uploader_aqua_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateaquarefined",
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "aqua", "sit" ]
+    },
+    "license_returner_aqua" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateaqualicense",
+        "command": [ "unique_id", "prefix", "aqua", "ptype" ]
+    },
     "downloader_terra_quicklook" : {
         "queue": "generate-terra",
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateterraquicklook",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "no", "yes"]
     },
     "downloader_terra_refined" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateterrarefined",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "no", "yes"]
     },
     "combiner_terra_quicklook" : {
         "cpu": "8",
         "memory": "500",
         "share_identifier": "generateterraquicklook",
-        "command": [ "300", "0", "yes", "MODIS_T", "QUICKLOOK", "-235", "input_list" ]
+        "command": [ "300", "10", "yes", "MODIS_T", "QUICKLOOK", "-235", "input_list" ]
     },
     "combiner_terra_refined" : {
         "cpu": "8",
@@ -72,23 +90,41 @@
         "share_identifier": "generateterrarefined",
         "command": [ "300", "yes", "MODIS_T", "REFINED", "no", "-235", "input_list" ]
     },
+    "uploader_terra_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateterraquicklook",
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "terra", "sit" ]
+    },
+    "uploader_terra_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateterrarefined",
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "terra", "sit" ]
+    },
+    "license_returner_terra" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateterralicense",
+        "command": [ "unique_id", "prefix", "terra", "ptype" ]
+    },
     "downloader_viirs_quicklook" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateviirsquicklook",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "no", "yes"]
     },
     "downloader_viirs_refined" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateviirsrefined",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "no", "yes"]
     },
     "combiner_viirs_quicklook" : {
         "cpu": "8",
         "memory": "500",
         "share_identifier": "generateviirsquicklook",
-        "command": [ "300", "0", "yes", "VIIRS", "QUICKLOOK", "-235", "input_list" ]
+        "command": [ "300", "10", "yes", "VIIRS", "QUICKLOOK", "-235", "input_list" ]
     },
     "combiner_viirs_refined" : {
         "cpu": "8",
@@ -108,22 +144,40 @@
         "share_identifier": "generateviirsrefined",
         "command": [ "300", "yes", "VIIRS", "REFINED", "no", "-235", "input_list" ]
     },
+    "uploader_viirs_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateviirsquicklook",
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "viirs", "sit" ]
+    },
+    "uploader_viirs_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateviirsrefined",
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "viirs", "sit" ]
+    },
+    "license_returner_viirs" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generateviirslicense",
+        "command": [ "unique_id", "prefix", "viirs", "ptype" ]
+    },
     "downloader_aqua_unmatched" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateaquaunmatched",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "AQUA", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_A", "/data/output", "2000", "1", "no", "yes"]
     },
     "downloader_terra_unmatched" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateterraunmatched",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "TERRA", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "MODIS_T", "/data/output", "2000", "1", "no", "yes"]
     },
     "downloader_viirs_unmatched" : {
         "cpu": "5",
         "memory": "500",
         "share_identifier": "generateviirsunmatched",
-        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "yes", "yes"]
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "no", "yes"]
     }
 }

@@ -1,0 +1,3 @@
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20230503T235501.L2.SST.NRT.nc eb781038ce56a76ff46f4a3bf1d8771eceef36c7
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20230503T235501.L2.OC.NRT.nc d57818b4ad5180a84dccd78491a4df11367f1fe1
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20230504T015001.L2.SST4.NRT.nc 5f373fdf46b6acefcc2af7bb9e7d111cbbfd109b

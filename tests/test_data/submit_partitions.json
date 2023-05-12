@@ -1,70 +1,38 @@
 {
-  "quicklook": {
-    "combiner": [
-      "combiner_file_lists_AQUA_quicklook_0.json",
-      "combiner_file_lists_AQUA_quicklook_1.json",
-      "combiner_file_lists_AQUA_quicklook_2.json"
-    ],
-    "downloader": [
-      "downloads_file_lists_AQUA_quicklook_0.json",
-      "downloads_file_lists_AQUA_quicklook_1.json",
-      "downloads_file_lists_AQUA_quicklook_2.json"
-    ],
-    "processor": [
-      "processor_timestamp_list_AQUA_quicklook_0.json",
-      "processor_timestamp_list_AQUA_quicklook_1.json",
-      "processor_timestamp_list_AQUA_quicklook_2.json"
-    ],
-    "downloader_txt": [
-      [
-        "aqua_quicklook_2023_01_25_19_48_45_0.txt",
-        "aqua_quicklook_2023_01_25_19_48_45_1.txt"
-      ],
-      [
-        "aqua_quicklook_2023_01_25_19_48_45_2.txt",
-        "aqua_quicklook_2023_01_25_19_48_45_3.txt"
-      ],
-      [
-        "aqua_quicklook_2023_01_25_19_48_45_4.txt"
-      ]
-    ]
-  },
-  "refined": {
-    "combiner": [
-      "combiner_file_lists_AQUA_refined_0.json",
-      "combiner_file_lists_AQUA_refined_1.json"
-    ],
-    "downloader": [
-      "downloads_file_lists_AQUA_refined_0.json",
-      "downloads_file_lists_AQUA_refined_1.json"
-    ],
-    "processor": [
-      "processor_timestamp_list_AQUA_refined_0.json",
-      "processor_timestamp_list_AQUA_refined_1.json"
-    ],
-    "downloader_txt": [
-      [
-        "aqua_refined_2023_01_25_19_48_45_0.txt",
-        "aqua_refined_2023_01_25_19_48_45_1.txt"
-      ],
-      [
-        "aqua_refined_2023_01_25_19_48_45_2.txt",
-        "aqua_refined_2023_01_25_19_48_45_3.txt"
-      ]
-    ]
-  },
-  "unmatched": {
-    "downloader": [
-      "downloads_file_lists_AQUA_unmatched_0.json",
-      "downloads_file_lists_AQUA_unmatched_1.json"
-    ],
-    "downloader_txt": [
-      [
-        "aqua_unmatched_2023_01_25_19_48_45_0.txt"
-      ],
-      [
-        "aqua_unmatched_2023_01_25_19_48_45_1.txt"
-      ]
-    ]
-  }
+  "quicklook": [
+    {
+      "downloader": "downloads_file_lists_TERRA_quicklook_2023_05_12_18_57_02_0_8720.json",
+      "combiner": "combiner_file_lists_TERRA_quicklook_2023_05_12_18_57_02_0_8720.json",
+      "processor": "processor_timestamp_list_TERRA_quicklook_2023_05_12_18_57_02_0_8720.json",
+      "uploader": "processor_timestamp_list_TERRA_quicklook_2023_05_12_18_57_02_0_8720.json"
+    },
+    {
+      "combiner": "combiner_file_lists_TERRA_quicklook_2023_05_12_18_57_02_1_8720.json",
+      "processor": "processor_timestamp_list_TERRA_quicklook_2023_05_12_18_57_02_1_8720.json",
+      "uploader": "processor_timestamp_list_TERRA_quicklook_2023_05_12_18_57_02_1_8720.json"
+    },
+    {
+      "combiner": "combiner_file_lists_TERRA_quicklook_2023_05_12_18_57_02_2_8720.json",
+      "processor": "processor_timestamp_list_TERRA_quicklook_2023_05_12_18_57_02_2_8720.json",
+      "uploader": "processor_timestamp_list_TERRA_quicklook_2023_05_12_18_57_02_2_8720.json"
+    }
+  ],
+  "refined": [
+    {
+      "downloader": "downloads_file_lists_TERRA_refined_2023_05_12_18_57_02_0_8720.json",
+      "combiner": "combiner_file_lists_TERRA_refined_2023_05_12_18_57_02_0_8720.json",
+      "processor": "processor_timestamp_list_TERRA_refined_2023_05_12_18_57_02_0_8720.json",
+      "uploader": "processor_timestamp_list_TERRA_refined_2023_05_12_18_57_02_0_8720.json"
+    },
+    {
+      "downloader": "downloads_file_lists_TERRA_refined_2023_05_12_18_57_02_1_8720.json",
+      "combiner": "combiner_file_lists_TERRA_refined_2023_05_12_18_57_02_1_8720.json",
+      "processor": "processor_timestamp_list_TERRA_refined_2023_05_12_18_57_02_1_8720.json",
+      "uploader": "processor_timestamp_list_TERRA_refined_2023_05_12_18_57_02_1_8720.json"
+    }
+  ],
+  "unmatched": [
+    "downloads_file_lists_TERRA_unmatched_2023_05_12_18_57_02_0_8720.json",
+    "downloads_file_lists_TERRA_unmatched_2023_05_12_18_57_02_1_8720.json"
+  ]
 }
