@@ -343,7 +343,7 @@ def sum_num_jobs(partitions):
 def read_config(prefix):
     """Read in JSON config file for AWS Batch job submission."""
     
-    s3_url = f"s3://{prefix}/download-lists/config/job_config.json"
+    s3_url = f"s3://{prefix}/config/job_config.json"
     with fsspec.open(s3_url, mode='r') as fh:
         job_config = json.load(fh)
     return job_config

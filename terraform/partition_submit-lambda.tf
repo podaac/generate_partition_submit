@@ -22,7 +22,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
 # Upload job configuration file to S3 bucket
 resource "aws_s3_object" "aws_s3_bucket_job_configuration" {
   bucket                 = data.aws_s3_bucket.s3_download_lists.id
-  key                    = "download-lists/config/job_config.json"
+  key                    = "config/job_config.json"
   server_side_encryption = "aws:kms"
   source                 = "job_config.json"
   etag                   = filemd5("job_config.json")
