@@ -107,9 +107,9 @@ def delete_s3(dataset, prefix, downloads_list, logger):
     s3 = boto3.client("s3")
     for txt_file in downloads_list:
         try:
-            response = s3.delete_object(Bucket=f"{prefix}-download-lists",
-                                        Key=f"{dataset}/{txt_file}")
-            logger.info(f"S3 file deleted: {dataset}/{txt_file}")      
+            response = s3.delete_object(Bucket=prefix,
+                                        Key=f"download-lists/{dataset}/{txt_file}")
+            logger.info(f"Deleted: s3://{prefix}/download-lists/{dataset}/{txt_file}")   
         except botocore.exceptions.ClientError as e:
             raise e  
         
@@ -343,7 +343,7 @@ def sum_num_jobs(partitions):
 def read_config(prefix):
     """Read in JSON config file for AWS Batch job submission."""
     
-    s3_url = f"s3://{prefix}-download-lists/config/job_config.json"
+    s3_url = f"s3://{prefix}/download-lists/config/job_config.json"
     with fsspec.open(s3_url, mode='r') as fh:
         job_config = json.load(fh)
     return job_config

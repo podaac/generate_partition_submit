@@ -165,7 +165,7 @@ class Partition:
         # Make a list of all downloads
         downloads = []
         for dlc_list in self.dlc_lists:
-            s3_url = f"s3://{prefix}-download-lists/{self.dataset}/{dlc_list}"
+            s3_url = f"s3://{prefix}/download-lists/{self.dataset}/{dlc_list}"
             try:
                 with fsspec.open(s3_url, mode='r') as fh:
                     downloads.extend(fh.read().splitlines())

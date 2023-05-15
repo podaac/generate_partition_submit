@@ -37,7 +37,7 @@ data "aws_kms_key" "aws_s3" {
 }
 
 data "aws_s3_bucket" "s3_download_lists" {
-  bucket = "${var.prefix}-download-lists"
+  bucket = "${var.prefix}"
 }
 
 data "aws_security_groups" "vpc_default_sg" {
