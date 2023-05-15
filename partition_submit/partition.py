@@ -10,7 +10,8 @@ from collections import OrderedDict
 import datetime
 import json
 import math
-from pathlib import Path
+import os
+import pathlib
 import random
 import time
 
@@ -64,8 +65,8 @@ class Partition:
         "viirs": {"filename" : "SNPP_VIIRS", "quicklook": "VIIRS_L2_SST_OBPG_QUICKLOOK", "refined": "VIIRS_L2_SST_OBPG_REFINED"}
     }
     
-    def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, prefix, 
-                 logger):
+    def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, jobs_dir,
+                 prefix, logger):
         """
         Attributes
         ----------
@@ -94,8 +95,9 @@ class Partition:
             "quicklook": [],
             "refined": []
         }
-        self.out_dir = Path(out_dir)
-        self.downloads_dir = Path(downloads_dir)
+        self.out_dir = out_dir
+        self.downloads_dir = downloads_dir
+        self.jobs_dir = jobs_dir
         self.prefix = prefix
         self.sst_dict = {}
         self.unmatched = []
@@ -130,14 +132,8 @@ class Partition:
                     job_partitions, downloads_total = self.write_json_files()
                     return job_partitions, downloads_total
                 elif len(self.unmatched) > 0:   # Only unmatched downloads to process
-                    downloader_json, total_downloads = self.write_unmatched_json()
-                    downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_unmatched")
-                    json_dict = {
-                        "unmatched": {
-                            "downloader": downloader_json_lists,
-                            "downloader_txt": downloader_json
-                        }
-                    } 
+                    job_files, total_downloads = self.write_unmatched_json()
+                    json_dict = { "unmatched": job_files }
                     return json_dict, total_downloads
                 else:
                     return {}, 0
@@ -190,6 +186,9 @@ class Partition:
         
         # Search and add matched SST3/4 and OC files to previous SST downloads
         self.search_unmatched()
+        
+        # Load the combiner threshold file to try to process unmatched SST files
+        self.load_combiner_threshold_txt("quicklook")
         
     def threshold_filter(self, json_file, ptype, threshold_time):
         """Filter json_files based on threshold value."""
@@ -307,7 +306,7 @@ class Partition:
             return False
         
     def search_unmatched(self):
-        """Determined if an SST file has been downlaoded for an OC or SST3/4 file."""
+        """Determined if an SST file has been downloaded for an OC or SST3/4 file."""
         
         # Locate previously downloaded SST files
         for obpg_file in self.unmatched:
@@ -334,6 +333,36 @@ class Partition:
                     if oc_sst34_dict["oc_file"] in self.unmatched: self.unmatched.remove(oc_sst34_dict["oc_file"])
                 if "sst34_file" in oc_sst34_dict.keys(): 
                     if oc_sst34_dict["sst34_file"] in self.unmatched: self.unmatched.remove(oc_sst34_dict["sst34_file"])
+                    
+    def load_combiner_threshold_txt(self, processing_type):
+        """Load SST files that were not processed by the combiner because 
+        matching SST4 and/or OC files could not be found."""
+        
+        # Load in all threshold txt files for the current dataset
+        with os.scandir(self.jobs_dir) as dir_entries:
+            p_level = f"{self.dataset}_{processing_type}"
+            threshold_txts = [ pathlib.Path(txt) for txt in dir_entries if p_level in txt.name ]
+        
+        ssts = []    
+        for threshold_txt in threshold_txts:
+            self.logger.info(f"Reading in combiner threshold file from EFS: {threshold_txt}.")
+            with open(threshold_txt) as fh:
+                ssts.extend(fh.read().splitlines())
+        
+        # Determine if they have been matched previously and add to list if they haven't
+        sst_count = 0
+        for sst in ssts:
+            nrt_sst = f"{'.'.join(sst.split('.')[:-1])}.NRT.nc"
+            exists = list(filter(lambda key: sst in key or nrt_sst in key, self.sst_dict[processing_type].keys()))
+            if len(exists) > 0: continue
+            self.sst_dict[processing_type][sst] = {}
+            sst_count += 1
+        self.logger.info(f"Loaded {sst_count} SST files that were not processed by the combiner.")
+            
+        # Delete threshold txt files
+        for threshold_txt in threshold_txts: 
+            threshold_txt.unlink()
+            self.logger.info(f"Deleted from EFS: {threshold_txt}.")
         
     def chunk_downloads_job_array(self):
         """Sort and partition downloads.
@@ -435,40 +464,20 @@ class Partition:
         json_dict = {}
         final_total = 0
         if len(self.obpg_files["quicklook"]) != 0:
-            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["quicklook"], "quicklook")
-            combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_quicklook")
-            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_quicklook")
-            processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_quicklook")
-            json_dict["quicklook"] = {
-                "combiner": combiner_json_lists,
-                "downloader": downloader_json_lists,
-                "processor": processor_json_lists,
-                "uploader": processor_json_lists,
-                "downloader_txt": downloader_json
-            }
+            job_json, total_downloads = self.write_txt_get_json(self.obpg_files["quicklook"], "quicklook")
+            job_files = self.write_json(job_json, "quicklook")
+            json_dict["quicklook"] = job_files
             final_total += total_downloads
             
         if len(self.obpg_files["refined"]) != 0:
-            combiner_json, downloader_json, processor_json, total_downloads = self.write_txt_get_json(self.obpg_files["refined"], "refined")
-            combiner_json_lists = self.write_json(combiner_json, f"combiner_file_lists_{self.dataset.upper()}_refined")
-            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_refined")
-            processor_json_lists = self.write_json(processor_json, f"processor_timestamp_list_{self.dataset.upper()}_refined")
-            json_dict["refined"] = {
-                "combiner": combiner_json_lists,
-                "downloader": downloader_json_lists,
-                "processor": processor_json_lists,
-                "uploader": processor_json_lists,
-                "downloader_txt": downloader_json
-            }
+            job_json, total_downloads = self.write_txt_get_json(self.obpg_files["refined"], "refined")
+            job_files = self.write_json(job_json, "refined")
+            json_dict["refined"] = job_files
             final_total += total_downloads
-            
+        
         if len(self.unmatched) != 0:
-            downloader_json, total_downloads = self.write_unmatched_json()
-            downloader_json_lists = self.write_json(downloader_json, f"downloads_file_lists_{self.dataset.upper()}_unmatched")
-            json_dict["unmatched"] = {
-                "downloader": downloader_json_lists,
-                "downloader_txt": downloader_json
-            }
+            job_files, total_downloads = self.write_unmatched_json()
+            json_dict["unmatched"] = job_files
             final_total += total_downloads
         
         return json_dict, final_total 
@@ -477,52 +486,96 @@ class Partition:
         """Write download txt list file and return associated combiner, 
         processor JSON files."""
         
-        i = 0
-        downloader_json = []
-        combiner_json = []
-        processor_json = []
+        job_json = []
+        job_array_count = 0
         total_downloads = 0
         for job_array in job_arrays:
-            txt_files = []
-            combiner_jobs = []
-            processor_jobs = []
-            for jobs in job_array:
-                txt_file = f"{self.dataset}_{self.datetime_str}_{i}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{self.datetime_str}_{i}_{self.unique_id}.txt"
-                with open(self.out_dir.joinpath(txt_file), 'w') as fh:
-                    for job in jobs:
-                        if "https" not in job: continue    # Skip previously downloaded SST
-                        fh.write(f"{job}\n")
-                        total_downloads += 1
-                txt_files.append(txt_file)
-                i += 1
-                if ptype == "quicklook":
-                    combiner_jobs.append([job.split(' ')[0].split('/')[-1].replace(".NRT", "") for job in jobs])
-                else:
-                    combiner_jobs.append([job.split(' ')[0].split('/')[-1] for job in jobs])
-                p_jobs = list(set([job.split(' ')[0].split('/')[-1].split('.')[1] for job in jobs]))
-                p_jobs.sort(reverse=True)
-                processor_jobs.append(p_jobs)
-            combiner_json.append(combiner_jobs)
-            downloader_json.append(txt_files)
-            processor_json.append(processor_jobs)
+            job_json.append({})
             
-        return combiner_json, downloader_json, processor_json, total_downloads
+            # Downloader
+            if not self.array_downloaded(job_array):
+                job_count = 0
+                job_json[job_array_count]["downloader"] = []
+                for jobs in job_array:                    
+                    txt_file = f"{self.dataset}_{ptype}_{self.datetime_str}_{job_array_count}_{job_count}_{self.unique_id}.txt" if not ptype else f"{self.dataset}_{ptype}_{self.datetime_str}_{job_array_count}_{job_count}_{self.unique_id}.txt"
+                    with open(self.out_dir.joinpath(txt_file), 'w') as fh:
+                        for job in jobs:
+                            if "https" not in job: continue    # Skip previously downloaded SST
+                            fh.write(f"{job}\n")
+                            total_downloads += 1
+                        job_count += 1
+                    job_json[job_array_count]["downloader"].append(txt_file)
+            
+            # Combiner & Processor
+            combiner, processor = self.create_jobs_json_data(job_array, ptype)
+            job_json[job_array_count]["combiner"] = combiner
+            job_json[job_array_count]["processor"] = processor
+            job_array_count += 1
+            
+        return job_json, total_downloads
     
-    def write_json(self, component_json, filename):
-        """Write JSON data for each job array in component JSON."""
+    def array_downloaded(self, job_array):
+        """Determine if all of the files in the job array have already been 
+        downloaded."""
         
-        i = 0
-        filename_list = []
-        for json_data in component_json:
-            filename_list.append(f"{filename}_{self.datetime_str}_{i}_{self.unique_id}.json")
-            with open(self.out_dir.joinpath(f"{filename}_{self.datetime_str}_{i}_{self.unique_id}.json"), 'w') as jf:
-                json.dump(json_data, jf, indent=2)
-            i += 1
-        return filename_list    
+        downloaded = True
+        for jobs in job_array:
+            for job in jobs:
+                if "https" in job:
+                    downloaded = False
+                    break
+        return downloaded
+    
+    def create_jobs_json_data(self, job_array, ptype):
+        """Create combiner and processor JSON for previously downloaded SST 
+        files."""
+        
+        combiner = []
+        processor = []
+        for jobs in job_array:
+            # Combiner
+            if ptype == "quicklook":
+                combiner.append([job.split(' ')[0].split('/')[-1].replace(".NRT", "") for job in jobs ])
+            else:
+                combiner.append([job.split(' ')[0].split('/')[-1] for job in jobs])
+                
+            # Processor
+            p_jobs = list(set([job.split(' ')[0].split('/')[-1].split('.')[1] for job in jobs]))
+            p_jobs.sort(reverse=True)
+            processor.append(p_jobs)
+        
+        return combiner, processor
+    
+    def write_json(self, job_json, processing_type):
+        """Write JSON data for each job array in component JSON making sure to
+        preserve array and dictionary structure."""
+        
+        # JSON file prefixes
+        filename_dict = {
+            "downloader": f"downloads_file_lists_{self.dataset.upper()}_{processing_type}",
+            "combiner": f"combiner_file_lists_{self.dataset.upper()}_{processing_type}",
+            "processor": f"processor_timestamp_list_{self.dataset.upper()}_{processing_type}"
+        }
+        
+        job_files = []
+        job_array_count = 0
+        for job_array in job_json:
+            job_files.append({})
+            for component, json_data in job_array.items():
+                filename = f"{filename_dict[component]}_{self.datetime_str}_{job_array_count}_{self.unique_id}.json"
+                with open(self.out_dir.joinpath(filename), 'w') as jf:
+                    json.dump(json_data, jf, indent=2)
+                job_files[job_array_count][component] = filename
+                # Also create and track uploader jobs that point to processor JSON
+                if component == "processor": job_files[job_array_count]["uploader"] = filename
+            job_array_count += 1
+        
+        return job_files    
     
     def write_unmatched_json(self):
         """Write download file lists and JSON for unmatched file downloads."""
         
+        # Write TXT files that contain downloads
         i = 0
         downloader_json = []
         total_downloads = 0
@@ -536,7 +589,18 @@ class Partition:
             txt_files.append(txt_file)
             i += 1
             downloader_json.append(txt_files)
-        return downloader_json, total_downloads
+            
+        # Write JSON files that point to TXT files
+        i = 0
+        filename_list = []
+        for json_data in downloader_json:
+            filename = f"downloads_file_lists_{self.dataset.upper()}_unmatched_{self.datetime_str}_{i}_{self.unique_id}.json"
+            with open(self.out_dir.joinpath(filename), 'w') as jf:
+                json.dump(json_data, jf, indent=2)
+            filename_list.append(filename)
+            i += 1
+        
+        return filename_list, total_downloads
         
 def get_num_lic_avail(dataset, prefix, logger):
     """Get the number of IDL licenses available."""

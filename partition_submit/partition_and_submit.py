@@ -11,6 +11,7 @@ Command line arguments:
 """
 
 # Standard imports
+import glob
 import json
 import logging
 import pathlib
@@ -47,13 +48,11 @@ def create_directories():
     combiner.joinpath("downloads").mkdir(parents=True, exist_ok=True)
     combiner.joinpath("jobs").mkdir(parents=True, exist_ok=True)
     combiner.joinpath("logs").mkdir(parents=True, exist_ok=True)
-    combiner.joinpath("scratch").mkdir(parents=True, exist_ok=True)
     
     # Downloader
     downloader = EFS_DIR.joinpath("downloader")
     downloader.joinpath("lists").mkdir(parents=True, exist_ok=True)
     downloader.joinpath("logs").mkdir(parents=True, exist_ok=True)
-    downloader.joinpath("output").mkdir(parents=True, exist_ok=True)
     downloader.joinpath("scratch").mkdir(parents=True, exist_ok=True)
     
     # Processor
@@ -73,33 +72,34 @@ def create_directories():
 def copy_to_efs(datadir, partitions, logger):
     """Copy DLC text files and coordination JSON files to EFS.
     
-    Assumption: The number of JSON files is same for all components
+    Assumption: The number of JSON files is same for the combiner and processor
     """
     
     # Create EFS directories if they don't exist
     create_directories()
     
+    # Copy downloader TXT files
+    txts = glob.glob(f"{datadir}/*.txt")
+    for txt in txts:
+        filepath = pathlib.Path(txt)
+        shutil.copyfile(filepath, f"{EFS_DIRS['downloader']}/{filepath.name}")
+        logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{txt}.")
+    
+    # Copy input JSON files
     ptypes = []
     if "quicklook" in partitions.keys(): ptypes.append("quicklook")
     if "refined" in partitions.keys(): ptypes.append("refined")
     if "unmatched" in partitions.keys(): ptypes.append("unmatched")
-    
     for ptype in ptypes:
-        # Copy text files to downloader directory
-        txts = [ txt_file for txt_list in partitions[ptype]["downloader_txt"] for txt_file in txt_list  ]
-        for txt in txts:
-            shutil.copyfile(f"{datadir}/{txt}", f"{EFS_DIRS['downloader']}/{txt}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{txt}.")
-    
-        # Copy JSON files to appropriate directories 
-        for i in range(len(partitions[ptype]["downloader"])):
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['downloader'][i]}", f"{EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{partitions[ptype]['downloader'][i]}.")
-            if ptype == "unmatched": continue
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['combiner'][i]}", f"{EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['combiner']}/{partitions[ptype]['combiner'][i]}.")
-            shutil.copyfile(f"{datadir}/{partitions[ptype]['processor'][i]}", f"{EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}")
-            logger.info(f"Copied to EFS: {EFS_DIRS['processor']}/{partitions[ptype]['processor'][i]}.")
+        for jobs in partitions[ptype]:
+            if ptype == "unmatched": 
+                shutil.copyfile(f"{datadir}/{jobs}", f"{EFS_DIRS['downloader']}/{jobs}")
+                logger.info(f"Copied to EFS: {EFS_DIRS['downloader']}/{jobs}.")
+            else:
+                for component, input_json in jobs.items():
+                    if component == "uploader": continue
+                    shutil.copyfile(f"{datadir}/{input_json}", f"{EFS_DIRS[component]}/{input_json}")
+                    logger.info(f"Copied to EFS: {EFS_DIRS[component]}/{input_json}.")
             
 def delete_s3(dataset, prefix, downloads_list, logger):
     """Delete DLC-created download lists from S3 bucket."""
@@ -138,23 +138,26 @@ def get_logger():
     # Return logger
     return logger  
 
-def handle_error(error, unique_id, prefix, dataset, logger, partition=None, account=None, region=None):
+def handle_error(error, prefix, dataset, logger, unique_id=None, dlc_lists=None, account=None, region=None):
     """Print out error message, notify users, return licenses, and exit."""
     
     # Log error
     logger.error(f"Error encountered: {type(error)}.")
     logger.error(error)
     
-    # Send download txts to pending jobs queue if applicable
-    if partition:
-        partition.update_queue(region, account, prefix)   # Send txt files to queue
-    
-    # Return licenses
-    try:
-        return_licenses(unique_id, prefix, dataset, logger)
-    except botocore.exceptions.ClientError as e:
-        logger.error(f"Error trying to restore reserved IDL licenses.")
-        logger.error(e)
+    # Send download txts to pending jobs queue and return licenses
+    if unique_id:
+        if dlc_lists: 
+            update_queue(dlc_lists, dataset, unique_id, region, account, prefix, logger)
+        try:
+            return_licenses(unique_id, prefix, dataset, logger)
+        except botocore.exceptions.ClientError as e:
+            logger.error(f"Error trying to restore reserved IDL licenses.")
+            logger.error(e)
+    else:
+        if dlc_lists:
+            update_queue(dlc_lists, dataset, "0000", region, account, prefix, logger)
+        logger.info(f"Could not return any reserved IDL licenses. Please check the parameter store to ensure licenses are accounted for.")
     
     # Send email
     notify(logger, "ERROR", error, type(error))
@@ -166,6 +169,23 @@ def handle_error(error, unique_id, prefix, dataset, logger, partition=None, acco
         
     # Exit
     sys.exit(1)
+    
+def update_queue(dlc_lists, dataset, unique_id, region, account, prefix, logger):
+        """Add download lists to queue."""
+        
+        sqs = boto3.client("sqs")
+        
+        # Send to queue
+        try:
+            response = sqs.send_message(
+                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs-{self.dataset}.fifo",
+                MessageBody=json.dumps(dlc_lists),
+                MessageDeduplicationId=f"{prefix}-{dataset}-{unique_id}",
+                MessageGroupId = f"{prefix}-{dataset}"
+            )
+            logger.info(f"Updated {prefix}-pending-jobs-{dataset}.fifo queue: {dlc_lists}.")
+        except botocore.exceptions.ClientError as e:
+            raise e
     
 def return_licenses(unique_id, prefix, dataset, logger, partition=None):
     """Return licenses that were reserved for current workflow."""
@@ -288,19 +308,37 @@ def print_jobs(partitions, logger):
     """Print the number of jobs per component and processing type."""
     
     if "quicklook" in partitions.keys():
-        logger.info(f"Number of quicklook downloader jobs: {len(partitions['quicklook']['downloader'])}")
-        logger.info(f"Number of quicklook combiner jobs: {len(partitions['quicklook']['combiner'])}")
-        logger.info(f"Number of quicklook processor jobs: {len(partitions['quicklook']['processor'])}")
-        logger.info(f"Number of quicklook uploader jobs: {len(partitions['quicklook']['uploader'])}")
+        downloader_jobs, combiner_jobs, processor_jobs, uploader_jobs = sum_num_jobs(partitions['quicklook'])
+        logger.info(f"Number of quicklook downloader jobs: {downloader_jobs}")
+        logger.info(f"Number of quicklook combiner jobs: {combiner_jobs}")
+        logger.info(f"Number of quicklook processor jobs: {processor_jobs}")
+        logger.info(f"Number of quicklook uploader jobs: {uploader_jobs}")
         
     if "refined" in partitions.keys():
-        logger.info(f"Number of refined downloader jobs: {len(partitions['refined']['downloader'])}")
-        logger.info(f"Number of refined combiner jobs: {len(partitions['refined']['combiner'])}")
-        logger.info(f"Number of refined processor jobs: {len(partitions['refined']['processor'])}")
-        logger.info(f"Number of refined uploader jobs: {len(partitions['refined']['uploader'])}")
+        downloader_jobs, combiner_jobs, processor_jobs, uploader_jobs = sum_num_jobs(partitions['refined'])
+        logger.info(f"Number of refined downloader jobs: {downloader_jobs}")
+        logger.info(f"Number of refined combiner jobs: {combiner_jobs}")
+        logger.info(f"Number of refined processor jobs: {processor_jobs}")
+        logger.info(f"Number of refined uploader jobs: {uploader_jobs}")
     
     if "unmatched" in partitions.keys():
-        logger.info(f"Number of unmatched downloader jobs: {len(partitions['unmatched']['downloader'])}")
+        logger.info(f"Number of unmatched downloader jobs: {len(partitions['unmatched'])}")
+    
+def sum_num_jobs(partitions):
+    """Total the number of jobs for each component in the partitions argument."""
+    
+    downloader_jobs = 0
+    combiner_jobs = 0
+    processor_jobs = 0
+    uploader_jobs = 0
+    for jobs in partitions:
+        for component in jobs.keys():
+            if component == "downloader": downloader_jobs += 1
+            if component == "combiner": combiner_jobs += 1
+            if component == "processor": processor_jobs += 1
+            if component == "uploader": uploader_jobs += 1
+                
+    return downloader_jobs, combiner_jobs, processor_jobs, uploader_jobs
 
 def read_config(prefix):
     """Read in JSON config file for AWS Batch job submission."""
@@ -331,16 +369,17 @@ def event_handler(event, context):
     
     # Partition
     try:
-        downloads_dir = EFS_DIRS["combiner"]
-        partition = Partition(dataset, download_lists, datadir, downloads_dir, prefix, logger)
+        downloads_dir = pathlib.Path(EFS_DIRS["combiner"])
+        jobs_dir = pathlib.Path(EFS_DIRS["combiner"]).parent.joinpath("jobs")
+        partition = Partition(dataset, download_lists, pathlib.Path(datadir), downloads_dir, jobs_dir, prefix, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         logger.info(f"Unique idenitifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
         logger.info(f"Total number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
-        handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+        handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=download_lists, account=account, region=region)
     except FileNotFoundError as e:
-        handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+        handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=None, account=account, region=region)
     
     # If there are downloads and available licenses, then submit jobs
     if partitions:
@@ -353,7 +392,7 @@ def event_handler(event, context):
             except botocore.exceptions.ClientError as e:
                 logger.error(f"Error trying to restore reserved IDL licenses.")
                 logger.error(e)
-                handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+                handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
         
         # Copy S3 text files and /tmp JSON files to EFS
         copy_to_efs(datadir, partitions, logger)
@@ -372,13 +411,13 @@ def event_handler(event, context):
                     logger.info(f"AWS Batch job submitted: {job_name} {submit.job_ids[i][j]}")
         except botocore.exceptions.ClientError as e:
             cancel_jobs(submit.job_ids, submit.job_names, logger)
-            handle_error(e, partition.unique_id, prefix, dataset, logger, partition=partition, account=account, region=region)
+            handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
         
         # # Delete download text file lists from S3 bucket
         # try:
         #     delete_s3(dataset, prefix, download_lists, logger)
         # except botocore.exceptions.ClientError as e:
-        #     handle_error(e, partition.unique_id, prefix, dataset, logger)
+        #     handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, partition=partition, account=account, region=region)
         
     else:
         if partition.num_lic_avail < 2:

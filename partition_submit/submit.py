@@ -45,7 +45,7 @@ class Submit:
         self.job_names = []
         self.job_ids = []
                        
-    def create_jobs(self, job_array_dict, prefix, unique_id):
+    def create_jobs(self, job_partitions, prefix, unique_id):
         """Create AWS Batch job arrays.
         
         Attributes
@@ -59,57 +59,48 @@ class Submit:
         """
         
         # Create component jobs
-        job_dict = {}
-        num_ql = 0
-        num_r = 0
-        for ptype, component_dict in job_array_dict.items():
-            if ptype == "unmatched": continue    # Handle unmatched downloads later
-            job_dict[ptype] = {}
-            for component, json_list in component_dict.items():
-                if component == "downloader_txt": continue
-                job_dict[ptype][component] = []
-                config_data = self.config_data[f"{component}_{self.dataset}_{ptype}"]
-                for json_file in json_list:
+        job_list = []
+        job_count = 0
+        for ptype, job_array in job_partitions.items():
+            if ptype == "unmatched": continue
+            for job in job_array:
+                job_list.append([])
+                for component, json_data in job.items():
+                    config_data = self.config_data[f"{component}_{self.dataset}_{ptype}"]
                     job = JobArray(self.dataset, 
-                                   ptype, component, 
-                                   json_file, config_data, 
-                                   self.data_dir,
-                                   prefix)
+                                    ptype, component, 
+                                    json_data, config_data, 
+                                    self.data_dir,
+                                    prefix)
                     if component == "uploader": job.update_command_prefix(prefix)
-                    job_dict[ptype][component].append(job)
-                    if ptype == "quicklook": num_ql +=1
-                    if ptype == "refined": num_r += 1
-            # License returner job
-            if ptype != "unmatched":
-                license_job =  JobArray(self.dataset, "license-returner", "license-returner", None,
-                                self.config_data[f"license_returner_{self.dataset}"], 
-                                None, prefix)
-                license_job.update_command_prefix(prefix)
-                license_job.update_command_uid(str(unique_id))
-                license_job.update_command_ptype(ptype)
-                job_dict[ptype]["license"] = license_job
-                
-        # Organize jobs
-        job_list = organize_jobs(job_dict, num_ql, num_r)
+                    job_list[job_count].append(job)
+                job_count += 1
+
+            # License returner job for each processing type
+            license_job =  JobArray(self.dataset, "license-returner", "license-returner", None,
+                            self.config_data[f"license_returner_{self.dataset}"], 
+                            None, prefix)
+            license_job.update_command_prefix(prefix)
+            license_job.update_command_uid(str(unique_id))
+            license_job.update_command_ptype(ptype)
+            job_list[-1].append(license_job)
         
         # Add any unmatched downloads to the job list
-        if "unmatched" in job_array_dict.keys(): job_list.append(self.append_unmatched_jobs(job_array_dict, prefix))
+        if "unmatched" in job_partitions.keys(): job_list.extend(self.append_unmatched_jobs(job_partitions, prefix))
         
         return job_list
     
-    def append_unmatched_jobs(self, job_array_dict, prefix):
+    def append_unmatched_jobs(self, job_partitions, prefix):
         """Append unmatched downloader jobs to job list."""
         
         unmatched = []
-        for component, json_files in job_array_dict["unmatched"].items():
-            for json_file in json_files:
-                if component == "downloader_txt": continue
-                config_data = self.config_data[f"{component}_{self.dataset}_unmatched"]
-                unmatched.append(JobArray(self.dataset, 
-                                        "unmatched", component, 
-                                        json_file, config_data, 
-                                        self.data_dir,
-                                        prefix))
+        for json_file in job_partitions["unmatched"]:
+            config_data = self.config_data[f"downloader_{self.dataset}_unmatched"]
+            unmatched.append([JobArray(self.dataset, 
+                                    "unmatched", "downloader", 
+                                    json_file, config_data, 
+                                    self.data_dir,
+                                    prefix)])
         return unmatched
     
     def submit_jobs(self, job_list):
@@ -136,56 +127,6 @@ class Submit:
                     raise error
             self.job_ids.append(job_ids)
             self.job_names.append(job_names)
-                    
-def organize_jobs(job_dict, num_ql, num_r):
-    """Organize JobArray jobs in job list by component and counter.
-    
-    Returns a list of lists with each sublist representative of a Generate
-    workflow. The lists can be executed in parallel.
-    
-    TODO Error handling when 3 components are not found?
-    
-    Parameter
-    --------
-    job_dict: dict
-        Dictionary of JobArray objects
-    num_ql: int
-        Number of quicklook jobs
-    num_r: int
-        Number of refined jobs
-    """
-    
-    quicklook = np.empty(shape=((num_ql//4), 4), dtype=object)
-    refined = np.empty(shape=((num_r//4), 4), dtype=object)
-    for ptype, components in job_dict.items():
-            for component, job_list in components.items():
-                if component == "license": continue
-                for job in job_list:
-                    j = int(job.counter)
-                    if ptype == "quicklook":
-                        if component == "downloader": quicklook[j,0] = job 
-                        if component == "combiner": quicklook[j,1] = job 
-                        if component == "processor": quicklook[j,2] = job 
-                        if component == "uploader": quicklook[j,3] = job
-                    if ptype == "refined":
-                        if component == "downloader": refined[j,0] = job 
-                        if component == "combiner": refined[j,1] = job 
-                        if component == "processor": refined[j,2] = job 
-                        if component == "uploader": refined[j,3] = job
-    
-    # Append license returner jobs if applicable
-    dims = quicklook.shape
-    has_data = np.any(quicklook)
-    quicklook = quicklook.tolist()
-    if has_data: quicklook[dims[0]-1].append(job_dict["quicklook"]["license"])
-    
-    dims = refined.shape
-    has_data = np.any(refined)
-    refined = refined.tolist()
-    if has_data: refined[dims[0]-1].append(job_dict["refined"]["license"])  
-    
-    job_list = quicklook + refined
-    return job_list
             
 def submit(job, job_id):
     """Submit job to AWS Batch.

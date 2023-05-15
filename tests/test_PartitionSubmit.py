@@ -25,15 +25,15 @@ class TestPartitionSubmit(unittest.TestCase):
     SUBMIT_CONFIG = TEST_DIR.joinpath("job_config.json")
     SUBMIT_RESULTS = TEST_DIR.joinpath("submit_results.json")
     
-    @patch("partition_submit.partition.get_num_lic_avil", autospec=True)
+    @patch("partition_submit.partition.get_num_lic_avail", autospec=True)
     def test_partition_chunk_downloads_job_array(self, num_lic_mock):
         """Test chunk_downloads_job_array method of Partition class."""
         
         # Set return value for mock
-        num_lic_mock.return_value = 5
+        num_lic_mock.return_value = (4,1)
         
         # Initialize Partition class
-        partition = Partition("aqua", None, "None", None)
+        partition = Partition("aqua", None, "None", None, None, "podaac-sndbx-generate", None)
         
         # Load test data
         with open(self.SST_DICT) as jf:
@@ -70,21 +70,23 @@ class TestPartitionSubmit(unittest.TestCase):
         """Test create_jobs method of Submit class."""
         
         # Initialize Submit class
-        submit = Submit(self.SUBMIT_CONFIG, "aqua", self.TEST_DIR.joinpath("out"))
+        with open (self.SUBMIT_CONFIG) as jf:
+            config_data = json.load(jf)
+        submit = Submit(config_data, "terra", self.TEST_DIR.joinpath("out"))
         
         # Load test data
         with open(self.SUBMIT_PARTITIONS) as jf:
             partitions = json.load(jf)
         
         # Execute method
-        job_list = submit.create_jobs(partitions, "podaac-sndbx-generate")
+        job_list = submit.create_jobs(partitions, "podaac-sndbx-generate", 1234)
         
         # Assert expected results
         actual = []
         for jobs in job_list:
             actual.append([job.job_name for job in jobs])
         with open(self.SUBMIT_RESULTS) as jf:
-            expected = json.load(jf)
+            expected = json.load(jf)    
         actual = np.array(actual, dtype="object")
         expected = np.array(expected, dtype="object")
         np.testing.assert_array_equal(actual, expected)
