@@ -338,6 +338,10 @@ class Partition:
         """Load SST files that were not processed by the combiner because 
         matching SST4 and/or OC files could not be found."""
         
+        # Check if combiner threshold directory exists
+        if not self.jobs_dir.isdir():
+            self.logger.info("No combiner threshold files exist.")
+        
         # Load in all threshold txt files for the current dataset
         with os.scandir(self.jobs_dir) as dir_entries:
             p_level = f"{self.dataset}_{processing_type}"
