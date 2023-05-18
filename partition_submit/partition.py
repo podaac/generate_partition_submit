@@ -339,7 +339,7 @@ class Partition:
         matching SST4 and/or OC files could not be found."""
         
         # Check if combiner threshold directory exists
-        if not self.jobs_dir.isdir():
+        if not os.path.isdir(self.jobs_dir):
             self.logger.info("No combiner threshold files exist.")
             return
         
