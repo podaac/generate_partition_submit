@@ -341,6 +341,7 @@ class Partition:
         # Check if combiner threshold directory exists
         if not self.jobs_dir.isdir():
             self.logger.info("No combiner threshold files exist.")
+            return
         
         # Load in all threshold txt files for the current dataset
         with os.scandir(self.jobs_dir) as dir_entries:
