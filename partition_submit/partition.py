@@ -355,14 +355,12 @@ class Partition:
                 ssts.extend(fh.read().splitlines())
         
         # Determine if they have been matched previously and add to list if they haven't
-        sst_count = 0
         for sst in ssts:
             nrt_sst = f"{'.'.join(sst.split('.')[:-1])}.NRT.nc"
             exists = list(filter(lambda key: sst in key or nrt_sst in key, self.sst_dict[processing_type].keys()))
             if len(exists) > 0: continue
             self.sst_dict[processing_type][sst] = {}
-            sst_count += 1
-        self.logger.info(f"Loaded {sst_count} SST files that were not processed by the combiner.")
+        self.logger.info(f"Loaded {len(ssts)} SST files that were not processed by the combiner.")
             
         # Delete threshold txt files
         for threshold_txt in threshold_txts: 
