@@ -25,7 +25,6 @@ resource "aws_s3_object" "aws_s3_bucket_job_configuration" {
   key                    = "config/job_config.json"
   server_side_encryption = "aws:kms"
   source                 = "job_config.json"
-  etag                   = filemd5("job_config.json")
 }
 
 # Lambda resource-based policy
