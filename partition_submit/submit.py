@@ -66,6 +66,7 @@ class Submit:
             for job in job_array:
                 job_list.append([])
                 for component, json_data in job.items():
+                    if f"{component}_{self.dataset}_{ptype}" not in self.config_data.keys(): continue
                     config_data = self.config_data[f"{component}_{self.dataset}_{ptype}"]
                     job = JobArray(self.dataset, 
                                     ptype, component, 
