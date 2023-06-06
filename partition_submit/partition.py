@@ -119,10 +119,12 @@ class Partition:
             
             # Partition downlaods by SST file timestamp
             if self.sst_dict: 
-                quicklook_lic, refined_lic = self.chunk_downloads_job_array()
+                quicklook_lic, refined_lic, leftover = self.chunk_downloads_job_array()
                                 
                 # Write out licenses reserved for workflow
-                write_workflow_license(prefix, self.dataset, quicklook_lic, refined_lic, self.floating_lic_avail, self.unique_id)
+                write_workflow_license(prefix, self.dataset, quicklook_lic, \
+                                        refined_lic, self.floating_lic_avail, \
+                                        leftover, self.unique_id, self.logger)
                 
                 # Check if there are any remaining files to submit as AWS Batch jobs   
                 jobs_exist = self.check_for_jobs()
@@ -379,10 +381,13 @@ class Partition:
         ql_sst_keys = list(OrderedDict(sorted(self.sst_dict["quicklook"].items(), reverse=True)).keys())
         r_sst_keys = list(OrderedDict(sorted(self.sst_dict["refined"].items(), reverse=True)).keys())
         
-        # Chunk sst keys based on number of licenses available to form job arrays            
+        # Chunk sst keys based on number of licenses available to form job arrays     
+        leftover = 0       
         if len(ql_sst_keys) == 0:
             ql = 0 
-            r = self.num_lic_avail + self.floating_lic_avail
+            r = (self.num_lic_avail + self.floating_lic_avail) // 2
+            leftover = self.num_lic_avail - (r - self.floating_lic_avail)
+            self.num_lic_avail = r - self.floating_lic_avail
             chunked_r_keys = np.array_split(r_sst_keys, r)
             chunked_r_keys = [ x for x in chunked_r_keys if len(x) > 0 ]    # Remove possible empty lists
             for sst in chunked_r_keys:
@@ -412,7 +417,7 @@ class Partition:
             batch = math.ceil(len(self.unmatched) / self.BATCH_SIZE)
             self.unmatched = np.array_split(self.unmatched, batch)
             
-        return ql, r
+        return ql, r, leftover
             
     def chunk_and_match(self, sst, ptype_dict, obpg_key):
         """Chunk job array into jobs and then match SST files to OC or SST3/4."""
@@ -693,7 +698,8 @@ def write_reserved_license(prefix, dataset, license_data):
     except botocore.exceptions.ClientError as e:
         raise e
 
-def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, floating_lic, unique_id):
+def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, 
+                           floating_lic, leftover, unique_id, logger):
     """Write license data to indicate number of licenses in use."""
     
     # Deterime values to write
@@ -717,6 +723,7 @@ def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, floating
                 Tier="Standard",
                 Overwrite=True
             )
+            logger.info(f"Wrote parameter: {prefix}-idl-{dataset}-{unique_id}-ql")
         if refined_lic > 0:
             response = ssm.put_parameter(
                 Name=f"{prefix}-idl-{dataset}-{unique_id}-r",
@@ -725,6 +732,7 @@ def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, floating
                 Tier="Standard",
                 Overwrite=True
             )
+            logger.info(f"Wrote parameter: {prefix}-idl-{dataset}-{unique_id}-r")
         if floating_lic > 0:
             response = ssm.put_parameter(
                 Name=f"{prefix}-idl-{dataset}-{unique_id}-floating",
@@ -733,5 +741,45 @@ def write_workflow_license(prefix, dataset, quicklook_lic, refined_lic, floating
                 Tier="Standard",
                 Overwrite=True
             )
+            logger.info(f"Wrote parameter: {prefix}-idl-{dataset}-{unique_id}-floating")
+        if leftover > 0:
+            write_leftover_lic(ssm, leftover, dataset, prefix, logger)
     except botocore.exceptions.ClientError as e:
         raise e
+    
+def write_leftover_lic(ssm, leftover, dataset, prefix, logger):
+    """Return any leftover licenses back to the dataset parameter."""
+    
+    # Open connection to parameter store
+    ssm = boto3.client("ssm")
+    
+    # Wait until other processes are done writing license data
+    try:
+        retrieving = ssm.get_parameter(Name=f"{prefix}-idl-retrieving-license")["Parameter"]["Value"]
+        while retrieving == "True":
+            logger.info("Waiting for license retrieval...")
+            time.sleep(3)
+            retrieving = ssm.get_parameter(Name=f"{prefix}-idl-retrieving-license")["Parameter"]["Value"]
+    except botocore.exceptions.ClientError as e:
+        raise e
+    
+    # Hold to write
+    hold_license(ssm, prefix, "True")
+    
+    # Write license number back
+    current = ssm.get_parameter(Name=f"{prefix}-idl-{dataset}")["Parameter"]["Value"]
+    total = int(leftover) + int(current)
+    try:
+        response = ssm.put_parameter(
+            Name=f"{prefix}-idl-{dataset}",
+            Type="String",
+            Value=str(total),
+            Tier="Standard",
+            Overwrite=True
+        )
+        logger.info(f"Returned {leftover} license(s) to parameter: {prefix}-idl-{dataset}")
+    except botocore.exceptions.ClientError as e:
+        raise e
+    
+    # Release 
+    hold_license(ssm, prefix, "False")
