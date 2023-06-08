@@ -270,25 +270,13 @@ class Partition:
     def oc_time_filter(self, oc_file, sst_file):
         """Filter by OC timestamp in name."""
 
-        oc = oc_file.split(' ')[0].split('/')[-1]
-        prefix = sst_file.split(' ')[0].split('/')[-1][:24]
-        # Check if there is an oc file available within 60 seconds of sst
-        for i in range(60):
-            if len(str(i)) == 1:
-                if "NRT" in sst_file:
-                    updated_oc_file = f"{prefix}0{i}.L2.OC.NRT.nc"
-                else:
-                    updated_oc_file = f"{prefix}0{i}.L2.OC.nc"
-            else:
-                if "NRT" in sst_file:
-                    updated_oc_file = f"{prefix}{i}.L2.OC.NRT.nc"
-                else:
-                    updated_oc_file = f"{prefix}{i}.L2.OC.nc"
-            
-            if updated_oc_file == oc:
-                return True
+        oc = oc_file.split(' ')[0].split('/')[-1].split('.')[1]
+        sst = sst_file.split(' ')[0].split('/')[-1].split('.')[1][:-2]
         
-        return False
+        if sst in oc:
+            return True
+        else:
+            return False
     
     def sst34_filter(self, sst34_file, sst_file, file_no):
         """Filter match for SST4 file name as compared to SST file."""
