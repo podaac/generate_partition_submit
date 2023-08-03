@@ -85,6 +85,29 @@ jobs:
             --org=${{ secrets.SNYK_ORG_ID }}
             --project-name=${{ github.repository }}
 
+      # Login and define registry, repository, and tag names
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Define ECR registry, repository, and image tag names
+        run : |
+          echo "REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+          echo "REPOSITORY=${PREFIX_ENV}-${APP_NAME_ENV}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+
+      # SNYK Docker
+      - name: Run Snyk Docker to test
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ steps.login-ecr.outputs.registry }}/${PREFIX_ENV}-${APP_NAME_ENV}
+          args: >
+              --org=${{ secrets.SNYK_ORG_ID }}
+              --project-name=${{ github.repository }}
+              --severity-threshold=high
+              --fail-on=all
+
       # Set up Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2.0.3
@@ -102,16 +125,6 @@ jobs:
           aws-access-key-id: ${{ secrets[format('AWS_ACCESS_KEY_ID_{0}', env.TARGET_ENV)] }}
           aws-secret-access-key: ${{ secrets[format('AWS_SECRET_ACCESS_KEY_{0}', env.TARGET_ENV)] }}
           aws-region: us-west-2
-
-      # Login and define registry, repository, and tag names
-      - name: Login to AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-      - name: Define ECR registry, repository, and image tag names
-        run : |
-          echo "REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
-          echo "REPOSITORY=${PREFIX_ENV}-${APP_NAME_ENV}" >> $GITHUB_ENV
-          echo "IMAGE_TAG=latest" >> $GITHUB_ENV
 
       # Create ECR repository (if it does not exist)
       - name: Create AWS ECR Repository
