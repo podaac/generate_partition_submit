@@ -75,7 +75,7 @@ jobs:
               --project-name=${{ github.repository }}
               --severity-threshold=high
               --fail-on=all
-      - name: Run Snyk Python to test
+      - name: Run Snyk Python to report
         uses: snyk/actions/python-3.8@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
