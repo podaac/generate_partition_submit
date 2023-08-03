@@ -85,6 +85,14 @@ jobs:
             --org=${{ secrets.SNYK_ORG_ID }}
             --project-name=${{ github.repository }}
 
+      # Configure credentials for ECR and Lambda
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets[format('AWS_ACCESS_KEY_ID_{0}', env.TARGET_ENV)] }}
+          aws-secret-access-key: ${{ secrets[format('AWS_SECRET_ACCESS_KEY_{0}', env.TARGET_ENV)] }}
+          aws-region: us-west-2
+
       # Login and define registry, repository, and tag names
       - name: Login to AWS ECR
         id: login-ecr
@@ -101,7 +109,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: ${{ steps.login-ecr.outputs.registry }}/${PREFIX_ENV}-${APP_NAME_ENV}
+          image: $REGISTRY/$REPOSITORY
           args: >
               --org=${{ secrets.SNYK_ORG_ID }}
               --project-name=${{ github.repository }}
@@ -117,14 +125,6 @@ jobs:
       # Validate Terraform file
       - name: Validate Terraform
         run: terraform validate -no-color
-
-      # Configure credentials for ECR and Lambda
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets[format('AWS_ACCESS_KEY_ID_{0}', env.TARGET_ENV)] }}
-          aws-secret-access-key: ${{ secrets[format('AWS_SECRET_ACCESS_KEY_{0}', env.TARGET_ENV)] }}
-          aws-region: us-west-2
 
       # Create ECR repository (if it does not exist)
       - name: Create AWS ECR Repository
