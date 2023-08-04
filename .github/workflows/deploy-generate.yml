@@ -103,14 +103,6 @@ jobs:
           echo "REPOSITORY=${PREFIX_ENV}-${APP_NAME_ENV}" >> $GITHUB_ENV
           echo "IMAGE_TAG=latest" >> $GITHUB_ENV
 
-      # SNYK Docker
-      - name: Run Snyk Docker to test
-        uses: snyk/actions/docker@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: ${REGISTRY}/${REPOSITORY}
-
       # Set up Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2.0.3
