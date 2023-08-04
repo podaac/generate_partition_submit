@@ -110,12 +110,6 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${REGISTRY}/${REPOSITORY}
-          args: >
-              --org=${{ secrets.SNYK_ORG_ID }}
-              --project-name=${{ github.repository }}
-              --severity-threshold=high
-              --fail-on=all
-              --file=Dockerfile
 
       # Set up Terraform
       - name: Setup Terraform
