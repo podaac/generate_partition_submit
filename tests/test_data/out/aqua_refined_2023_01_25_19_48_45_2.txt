@@ -1,8 +1,0 @@
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003500.L2.SST.nc bf42ee044bc56f150dab64499ba2c87157d2ac5d
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003500.L2.SST4.nc b2b66a43028deca252704b6ece85f26d93b058ca
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003001.L2.SST.nc 492e7cd776315dd4634170c67333e0a6a648ffbb
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T003001.L2.SST4.nc ba48acb6136abe21f740a20cbfe7adbdb3ae4223
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002501.L2.SST.nc 165ccc2084a82ed2b1fb9895078857f2d54e5f96
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002501.L2.SST4.nc 8c21a5dabc97ae6328ce9e9f69ccee81a331b1f6
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002001.L2.SST.nc 247a729293027885ce4494d4a3ca8617f9ec1099
-https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/AQUA_MODIS.20220605T002001.L2.SST4.nc 68dd08200d1ffb4f72f23e74b219d235516e0c1c

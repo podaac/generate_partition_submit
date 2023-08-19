@@ -1,0 +1,12 @@
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T005001.L2.SST.nc 5c8bb964f26eaee637fb873cbc1b06d760850b51
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T005001.L2.OC.nc e8008240a7a0116962dbd2f5578eb3868e092c84
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T004501.L2.SST.nc 8e2ff5de5646ca0c6b6df5ae2832f428c0a0fd96
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T004501.L2.OC.nc 5483f8eb23b52b4c4ff2111b0048e7383832ff19
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T004000.L2.SST.nc 1960d387a4e17fd794919a092a453744db18d4bb
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T004000.L2.OC.nc 4db7d5b336375d84ec5b74473b55f4095885773d
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T003500.L2.SST.nc 1333c04e3a8d1d5402a190ab768beb863a7018c2
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T003500.L2.OC.nc 0676807c89a365182b1a7c21752b1f20cc4b0af6
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T003000.L2.SST.nc d53bfc96fad85569d5e07a4d5cf1bec23ec62e27
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T003000.L2.OC.nc 62d9286eae07cf7e08c37cd92d481cf29b0920c8
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T002500.L2.SST.nc 04bdfd10297bb6f5d7aae30e3a9255808dc41ae2
+https://oceandata.sci.gsfc.nasa.gov/cgi/getfile/TERRA_MODIS.20210605T002500.L2.OC.nc f419bbea7ab239196a9c961c943d1c0609177a83

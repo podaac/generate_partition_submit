@@ -4,7 +4,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
   function_name = "${var.prefix}-partition-submit"
   role          = aws_iam_role.aws_lambda_execution_role.arn
   package_type  = "Image"
-  memory_size   = 256
+  memory_size   = 2048
   timeout       = 600
   ephemeral_storage {
     size = 1024
@@ -14,7 +14,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
     security_group_ids = data.aws_security_groups.vpc_default_sg.ids
   }
   file_system_config {
-    arn              = data.aws_efs_access_points.aws_efs_generate_ap.arns[0]
+    arn              = data.aws_efs_access_point.fsap_ps.arn
     local_mount_path = "/mnt/data"
   }
 }
@@ -25,7 +25,6 @@ resource "aws_s3_object" "aws_s3_bucket_job_configuration" {
   key                    = "config/job_config.json"
   server_side_encryption = "aws:kms"
   source                 = "job_config.json"
-  etag                   = filemd5("job_config.json")
 }
 
 # Lambda resource-based policy
@@ -126,9 +125,15 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Effect" : "Allow",
         "Action" : [
           "elasticfilesystem:ClientMount",
-          "elasticfilesystem:ClientWrite"
+          "elasticfilesystem:ClientWrite",
+          "elasticfilesystem:DescribeMountTargets"
         ],
-        "Resource" : "${data.aws_efs_access_points.aws_efs_generate_ap.arns[0]}"
+        "Resource" : "${data.aws_efs_access_point.fsap_ps.file_system_arn}"
+        "Condition" : {
+          "StringEquals" : {
+            "elasticfilesystem:AccessPointArn" : "${data.aws_efs_access_point.fsap_ps.arn}"
+          }
+        }
       },
       {
         "Sid" : "AllowListBucket",
