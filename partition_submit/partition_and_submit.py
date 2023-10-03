@@ -100,19 +100,7 @@ def copy_to_efs(datadir, partitions, logger):
                     if component == "uploader": continue
                     shutil.copyfile(f"{datadir}/{input_json}", f"{EFS_DIRS[component]}/{input_json}")
                     logger.info(f"Copied to EFS: {EFS_DIRS[component]}/{input_json}.")
-            
-def delete_s3(dataset, prefix, downloads_list, logger):
-    """Delete DLC-created download lists from S3 bucket."""
-    
-    s3 = boto3.client("s3")
-    for txt_file in downloads_list:
-        try:
-            response = s3.delete_object(Bucket=prefix,
-                                        Key=f"download-lists/{dataset}/{txt_file}")
-            logger.info(f"Deleted: s3://{prefix}/download-lists/{dataset}/{txt_file}")   
-        except botocore.exceptions.ClientError as e:
-            raise e  
-        
+
 def get_logger():
     """Return a formatted logger object."""
     
@@ -373,9 +361,16 @@ def event_handler(event, context):
         jobs_dir = pathlib.Path(EFS_DIRS["combiner"]).parent.joinpath("jobs")
         partition = Partition(dataset, download_lists, pathlib.Path(datadir), downloads_dir, jobs_dir, prefix, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
-        logger.info(f"Unique idenitifier: {partition.unique_id}")
+        if dataset == "aqua":
+            ds = "MODIS Aqua"
+        elif dataset == "terra":
+            ds = "MODIS Terra"
+        else:
+            ds = "VIIRS"
+        logger.info(f"Dataset: {ds}")
+        logger.info(f"Unique identifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
-        logger.info(f"Total number of downloads: {total_downloads}")
+        logger.info(f"Number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
         handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=download_lists, account=account, region=region)
     except FileNotFoundError as e:
@@ -412,12 +407,6 @@ def event_handler(event, context):
         except botocore.exceptions.ClientError as e:
             cancel_jobs(submit.job_ids, submit.job_names, logger)
             handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
-        
-        # # Delete download text file lists from S3 bucket
-        # try:
-        #     delete_s3(dataset, prefix, download_lists, logger)
-        # except botocore.exceptions.ClientError as e:
-        #     handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, partition=partition, account=account, region=region)
         
     else:
         if partition.num_lic_avail < 2:
