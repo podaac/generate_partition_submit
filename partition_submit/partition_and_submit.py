@@ -100,19 +100,7 @@ def copy_to_efs(datadir, partitions, logger):
                     if component == "uploader": continue
                     shutil.copyfile(f"{datadir}/{input_json}", f"{EFS_DIRS[component]}/{input_json}")
                     logger.info(f"Copied to EFS: {EFS_DIRS[component]}/{input_json}.")
-            
-def delete_s3(dataset, prefix, downloads_list, logger):
-    """Delete DLC-created download lists from S3 bucket."""
-    
-    s3 = boto3.client("s3")
-    for txt_file in downloads_list:
-        try:
-            response = s3.delete_object(Bucket=prefix,
-                                        Key=f"download-lists/{dataset}/{txt_file}")
-            logger.info(f"Deleted: s3://{prefix}/download-lists/{dataset}/{txt_file}")   
-        except botocore.exceptions.ClientError as e:
-            raise e  
-        
+
 def get_logger():
     """Return a formatted logger object."""
     
@@ -142,7 +130,7 @@ def handle_error(error, prefix, dataset, logger, unique_id=None, dlc_lists=None,
     """Print out error message, notify users, return licenses, and exit."""
     
     # Log error
-    logger.error(f"Error encountered: {type(error)}.")
+    logger.info(f"Error encountered: {type(error)}.")
     logger.error(error)
     
     # Send download txts to pending jobs queue and return licenses
@@ -152,7 +140,7 @@ def handle_error(error, prefix, dataset, logger, unique_id=None, dlc_lists=None,
         try:
             return_licenses(unique_id, prefix, dataset, logger)
         except botocore.exceptions.ClientError as e:
-            logger.error(f"Error trying to restore reserved IDL licenses.")
+            logger.info(f"Error trying to restore reserved IDL licenses.")
             logger.error(e)
     else:
         if dlc_lists:
@@ -161,7 +149,7 @@ def handle_error(error, prefix, dataset, logger, unique_id=None, dlc_lists=None,
     
     # Send email
     notify(logger, "ERROR", error, type(error))
-    logger.error("System exiting.")
+    logger.info("System exiting.")
     
     # Delete logger    
     for handler in logger.handlers:
@@ -178,7 +166,7 @@ def update_queue(dlc_lists, dataset, unique_id, region, account, prefix, logger)
         # Send to queue
         try:
             response = sqs.send_message(
-                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs-{self.dataset}.fifo",
+                QueueUrl=f"https://sqs.{region}.amazonaws.com/{account}/{prefix}-pending-jobs-{dataset}.fifo",
                 MessageBody=json.dumps(dlc_lists),
                 MessageDeduplicationId=f"{prefix}-{dataset}-{unique_id}",
                 MessageGroupId = f"{prefix}-{dataset}"
@@ -260,7 +248,7 @@ def hold_license(ssm, prefix, on_hold, logger):
             )
         except botocore.exceptions.ClientError as e:
             hold_action = "place" if on_hold == "True" else "remove"
-            logger.error(f"Could not {hold_action} a hold on licenses...")
+            logger.info(f"Could not {hold_action} a hold on licenses...")
             raise e
         
 def write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, dataset, logger):
@@ -288,7 +276,7 @@ def write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, datase
         logger.info(f"Wrote {int(quicklook_lic) + int(refined_lic)} licenses to {dataset}.")
         logger.info(f"Wrote {floating_lic} license(s) to floating.")
     except botocore.exceptions.ClientError as e:
-        logger.error(f"Could not return {dataset} and floating licenses...")
+        logger.info(f"Could not return {dataset} and floating licenses...")
         raise e
     
 def cancel_jobs(job_ids, job_names, logger):
@@ -302,7 +290,8 @@ def cancel_jobs(job_ids, job_names, logger):
                 response = client.terminate_job(jobId=job_id, reason="Partition and Submit lambda encountered a failure.")
                 logger.info(f"Cancelled job: {job_names[i]} - {job_id}")
             except botocore.exceptions.ClientError as error:
-                logger.error(f"Could not cancel job: {job_names[i]} - {job_id}")   
+                logger.info(f"Could not cancel job: {job_names[i]} - {job_id}")   
+                logger.error(error)
     
 def print_jobs(partitions, logger):
     """Print the number of jobs per component and processing type."""
@@ -373,9 +362,16 @@ def event_handler(event, context):
         jobs_dir = pathlib.Path(EFS_DIRS["combiner"]).parent.joinpath("jobs")
         partition = Partition(dataset, download_lists, pathlib.Path(datadir), downloads_dir, jobs_dir, prefix, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
-        logger.info(f"Unique idenitifier: {partition.unique_id}")
+        if dataset == "aqua":
+            ds = "MODIS Aqua"
+        elif dataset == "terra":
+            ds = "MODIS Terra"
+        else:
+            ds = "VIIRS"
+        logger.info(f"Dataset: {ds}")
+        logger.info(f"Unique identifier: {partition.unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
-        logger.info(f"Total number of downloads: {total_downloads}")
+        logger.info(f"Number of downloads: {total_downloads}")
     except botocore.exceptions.ClientError as e:
         handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=download_lists, account=account, region=region)
     except FileNotFoundError as e:
@@ -390,8 +386,7 @@ def event_handler(event, context):
             try:
                 return_licenses(partition.unique_id, prefix, dataset, logger)
             except botocore.exceptions.ClientError as e:
-                logger.error(f"Error trying to restore reserved IDL licenses.")
-                logger.error(e)
+                logger.info(f"Error trying to restore reserved IDL licenses.")
                 handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
         
         # Copy S3 text files and /tmp JSON files to EFS
@@ -412,12 +407,6 @@ def event_handler(event, context):
         except botocore.exceptions.ClientError as e:
             cancel_jobs(submit.job_ids, submit.job_names, logger)
             handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, dlc_lists=download_lists, account=account, region=region)
-        
-        # # Delete download text file lists from S3 bucket
-        # try:
-        #     delete_s3(dataset, prefix, download_lists, logger)
-        # except botocore.exceptions.ClientError as e:
-        #     handle_error(e, prefix, dataset, logger, unique_id=partition.unique_id, partition=partition, account=account, region=region)
         
     else:
         if partition.num_lic_avail < 2:

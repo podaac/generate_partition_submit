@@ -170,8 +170,10 @@ class Partition:
             s3_url = f"s3://{prefix}/download-lists/{self.dataset}/{dlc_list}"
             try:
                 with fsspec.open(s3_url, mode='r') as fh:
-                    downloads.extend(fh.read().splitlines())
+                    d = fh.read().splitlines()
+                    downloads.extend(d)
                     self.logger.info(f"Downloads retrieved from: {s3_url}.")
+                    for download in d: self.logger.info(f"Processed: {dlc_list} | {download}")
             except FileNotFoundError:
                 self.logger.error(f"Download list creator txt could not be found: {s3_url}.")
         
@@ -346,6 +348,7 @@ class Partition:
         
         # Determine if they have been matched previously and add to list if they haven't
         for sst in ssts:
+            self.logger.info(f"Combiner waiting to process: {sst}")
             nrt_sst = f"{'.'.join(sst.split('.')[:-1])}.NRT.nc"
             exists = list(filter(lambda key: sst in key or nrt_sst in key, self.sst_dict[processing_type].keys()))
             if len(exists) > 0: continue
