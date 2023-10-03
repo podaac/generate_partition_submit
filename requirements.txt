@@ -14,6 +14,6 @@ s3fs==2022.11.0
 s3transfer==0.6.0
 six==1.16.0
 typing_extensions==4.4.0
-urllib3==1.26.12
+urllib3==1.26.17
 wrapt==1.14.1
 yarl==1.8.2
