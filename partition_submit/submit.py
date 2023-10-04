@@ -113,17 +113,26 @@ class Submit:
             list of lists with each sublist a Generate workflow
         """
         
+        lr_deps = []
         for jobs in job_list:
             job_ids = []
             job_names = []
             for job in jobs:
                 try:
-                    if len(job_ids) == 0:
-                        job_ids.append(submit(job, 0))
+                    if "license-returner" in job.job_name:
+                        job_id = submit(job, lr_deps)
+                        job_ids.append(job_id)
+                        job_names.append(job.job_name)
+                    elif len(job_ids) == 0:
+                        job_id = submit(job, 0)
+                        job_ids.append(job_id)
                         job_names.append(job.job_name)
                     else:
-                        job_ids.append(submit(job, job_ids[-1]))
+                        job_id = submit(job, job_ids[-1])
+                        job_ids.append(job_id)
                         job_names.append(job.job_name)
+                    if "processor" in job.job_name:
+                        lr_deps.append(job_id)
                 except botocore.exceptions.ClientError as error:
                     raise error
             self.job_ids.append(job_ids)
