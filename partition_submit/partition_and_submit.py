@@ -14,7 +14,9 @@ Command line arguments:
 import glob
 import json
 import logging
+import os
 import pathlib
+import random
 import shutil
 import sys
 import time
@@ -337,6 +339,36 @@ def read_config(prefix):
         job_config = json.load(fh)
     return job_config
 
+def print_final_log(log_message, logger):
+    """Print final log message."""
+    
+    # Open file used to track data
+    log_file = pathlib.Path(os.environ["FINAL_LOG_MESSAGE"])
+    if log_file.exists():
+        with open(log_file) as fh:
+            log_data = fh.read().splitlines()
+
+        # Organize file data into a string
+        execution_data = log_message
+        wrote_parameter = []
+        combiner_wait = []
+        processed = []
+        for line in log_data:
+            if "combiner_wait_total" in line: execution_data += f" - {line}"
+            if "processed" in line: processed.append(line.split("processed: ")[-1])
+            if "wrote_parameter" in line: wrote_parameter.append(line.split("wrote_parameter: ")[-1])
+            if "combiner_sst_wait" in line: combiner_wait.append(line.split("combiner_sst_wait: ")[-1])
+        
+        final_log_message = ""
+        if execution_data: final_log_message += execution_data
+        if len(processed) > 0: final_log_message += f" - processed: {', '.join(processed)}"
+        if len(wrote_parameter) > 0: final_log_message += f" - wrote_parameter: {', '.join(wrote_parameter)}"
+        if len(combiner_wait) > 0: final_log_message += f" - combiner_sst_wait: {', '.join(combiner_wait)}"
+        
+        # Print final log message and remove temp log file
+        logger.info(final_log_message)
+        log_file.unlink()
+
 def event_handler(event, context):
     """AWS Lambda event handler that kicks off partition of data and submits
     AWS Batch jobs."""
@@ -351,16 +383,19 @@ def event_handler(event, context):
     prefix = body["prefix"]
     config = read_config(prefix)
     download_lists = body["txt_list"]
+    unique_id = random.randint(1000,9999)
+    os.environ["FINAL_LOG_MESSAGE"] = f"/tmp/final_log_message_{partition.unique_id}.txt"    
     
     # Logger
     logger = get_logger()
     logger.info(f"Event - {event}")
+    log_message = ""
     
     # Partition
     try:
         downloads_dir = pathlib.Path(EFS_DIRS["combiner"])
         jobs_dir = pathlib.Path(EFS_DIRS["combiner"]).parent.joinpath("jobs")
-        partition = Partition(dataset, download_lists, pathlib.Path(datadir), downloads_dir, jobs_dir, prefix, logger)
+        partition = Partition(dataset, download_lists, pathlib.Path(datadir), downloads_dir, jobs_dir, prefix, unique_id, logger)
         partitions, total_downloads = partition.partition_downloads(region, account, prefix)
         if dataset == "aqua":
             ds = "MODIS Aqua"
@@ -369,9 +404,10 @@ def event_handler(event, context):
         else:
             ds = "VIIRS"
         logger.info(f"Dataset: {ds}")
-        logger.info(f"Unique identifier: {partition.unique_id}")
+        logger.info(f"Unique identifier: {unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
         logger.info(f"Number of downloads: {total_downloads}")
+        log_message = f"dataset: {ds} - unique_id: {unique_id} - number_licenses: {partition.num_lic_avail + partition.floating_lic_avail} - number_downloads: {total_downloads}"
     except botocore.exceptions.ClientError as e:
         handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=download_lists, account=account, region=region)
     except FileNotFoundError as e:
@@ -414,6 +450,9 @@ def event_handler(event, context):
         else:
             logger.info("No downloads available to process.")
             return_licenses(partition.unique_id, prefix, dataset, logger, partition)
+            
+    # Write final log message
+    print_final_log(log_message, logger)
             
     # Delete logger    
     for handler in logger.handlers:
