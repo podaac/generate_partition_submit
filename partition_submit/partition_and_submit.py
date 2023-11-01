@@ -384,7 +384,7 @@ def event_handler(event, context):
     config = read_config(prefix)
     download_lists = body["txt_list"]
     unique_id = random.randint(1000,9999)
-    os.environ["FINAL_LOG_MESSAGE"] = f"/tmp/final_log_message_{partition.unique_id}.txt"    
+    os.environ["FINAL_LOG_MESSAGE"] = f"/tmp/final_log_message_{unique_id}.txt"    
     
     # Logger
     logger = get_logger()
