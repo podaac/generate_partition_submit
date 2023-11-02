@@ -407,7 +407,7 @@ def event_handler(event, context):
         logger.info(f"Unique identifier: {unique_id}")
         logger.info(f"Number of licenses available: {partition.num_lic_avail + partition.floating_lic_avail}.")
         logger.info(f"Number of downloads: {total_downloads}")
-        log_message = f"dataset: {ds} - unique_id: {unique_id} - number_licenses: {partition.num_lic_avail + partition.floating_lic_avail} - number_downloads: {total_downloads}"
+        log_message = f"unique_id: {unique_id} - dataset: {ds} - number_downloads: {total_downloads} - number_licenses: {partition.num_lic_avail + partition.floating_lic_avail}"
     except botocore.exceptions.ClientError as e:
         handle_error(e, prefix, dataset, logger, unique_id=None, dlc_lists=download_lists, account=account, region=region)
     except FileNotFoundError as e:
