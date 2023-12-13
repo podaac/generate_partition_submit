@@ -12,7 +12,6 @@ import json
 import math
 import os
 import pathlib
-import random
 import time
 
 # Third party imports
@@ -66,7 +65,7 @@ class Partition:
     }
     
     def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, jobs_dir,
-                 prefix, logger):
+                 prefix, unique_id, logger):
         """
         Attributes
         ----------
@@ -84,7 +83,7 @@ class Partition:
         self.datetime_str = datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
         self.dlc_lists = dlc_lists
         self.logger = logger
-        self.unique_id = random.randint(1000, 9999)
+        self.unique_id = unique_id
         try:
             dataset_lic, floating_lic = get_num_lic_avail(dataset, prefix, self.logger)
         except botocore.exceptions.ClientError as e:
@@ -170,8 +169,12 @@ class Partition:
             s3_url = f"s3://{prefix}/download-lists/{self.dataset}/{dlc_list}"
             try:
                 with fsspec.open(s3_url, mode='r') as fh:
-                    downloads.extend(fh.read().splitlines())
+                    d = fh.read().splitlines()
+                    downloads.extend(d)
                     self.logger.info(f"Downloads retrieved from: {s3_url}.")
+                    for download in d: 
+                        self.logger.info(f"Processed: {dlc_list} | {download}")
+                        write_final_log(f"processed: {download}")
             except FileNotFoundError:
                 self.logger.error(f"Download list creator txt could not be found: {s3_url}.")
         
@@ -346,11 +349,14 @@ class Partition:
         
         # Determine if they have been matched previously and add to list if they haven't
         for sst in ssts:
+            self.logger.info(f"Combiner waiting to process: {sst}")
+            write_final_log(f"combiner_sst_wait: {sst}")
             nrt_sst = f"{'.'.join(sst.split('.')[:-1])}.NRT.nc"
             exists = list(filter(lambda key: sst in key or nrt_sst in key, self.sst_dict[processing_type].keys()))
             if len(exists) > 0: continue
             self.sst_dict[processing_type][sst] = {}
         self.logger.info(f"Loaded {len(ssts)} SST files that were not processed by the combiner.")
+        write_final_log(f"combiner_wait_total: {len(ssts)}")
             
         # Delete threshold txt files
         for threshold_txt in threshold_txts: 
@@ -771,3 +777,10 @@ def write_leftover_lic(ssm, leftover, dataset, prefix, logger):
     
     # Release 
     hold_license(ssm, prefix, "False")
+    
+def write_final_log(message):
+    """Write message to final log file."""
+    
+    final_log = os.environ.get("FINAL_LOG_MESSAGE")
+    with open(final_log, 'a') as fh:
+        fh.write(f"{message}\n") 
