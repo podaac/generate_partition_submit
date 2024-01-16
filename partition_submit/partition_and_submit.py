@@ -359,7 +359,7 @@ def print_final_log(log_message, logger):
             if "wrote_parameter" in line: wrote_parameter.append(line.split("wrote_parameter: ")[-1])
             if "combiner_sst_wait" in line: combiner_wait.append(line.split("combiner_sst_wait: ")[-1])
         
-        final_log_message = ""
+        final_log_message = "final_log: "
         if execution_data: final_log_message += execution_data
         if len(processed) > 0: final_log_message += f" - processed: {', '.join(processed)}"
         if len(wrote_parameter) > 0: final_log_message += f" - wrote_parameter: {', '.join(wrote_parameter)}"
