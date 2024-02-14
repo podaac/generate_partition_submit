@@ -200,7 +200,7 @@ def return_licenses(unique_id, prefix, dataset, logger, partition=None):
         # Return licenses to appropriate parameters
         if (quicklook_lic == 0) and (refined_lic == 0) and (floating_lic == 0):    
             # Indicates that no downloads were found and no licenses were reserved for processing type
-            write_licenses(ssm, partition.num_lic_avail, 0, partition.floating_lic_avail, prefix, dataset, logger)
+            logger.info("No licenses were reserved or located to return.")
         else:
             write_licenses(ssm, quicklook_lic, refined_lic, floating_lic, prefix, dataset, logger)
         
@@ -359,7 +359,7 @@ def print_final_log(log_message, logger):
             if "wrote_parameter" in line: wrote_parameter.append(line.split("wrote_parameter: ")[-1])
             if "combiner_sst_wait" in line: combiner_wait.append(line.split("combiner_sst_wait: ")[-1])
         
-        final_log_message = ""
+        final_log_message = "final_log: "
         if execution_data: final_log_message += execution_data
         if len(processed) > 0: final_log_message += f" - processed: {', '.join(processed)}"
         if len(wrote_parameter) > 0: final_log_message += f" - wrote_parameter: {', '.join(wrote_parameter)}"
