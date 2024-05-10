@@ -65,7 +65,7 @@ jobs:
 
       # SNYK Python
       - name: Run Snyk Python to test
-        uses: snyk/actions/python-3.8@master
+        uses: snyk/actions/python-3.10@master
         env:
             SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
@@ -76,7 +76,7 @@ jobs:
               --severity-threshold=high
               --fail-on=all
       - name: Run Snyk Python to report
-        uses: snyk/actions/python-3.8@master
+        uses: snyk/actions/python-3.10@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
