@@ -5,7 +5,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
   role          = aws_iam_role.aws_lambda_execution_role.arn
   package_type  = "Image"
   memory_size   = 2048
-  timeout       = 600
+  timeout       = 900
   ephemeral_storage {
     size = 1024
   }
