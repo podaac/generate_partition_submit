@@ -61,7 +61,8 @@ class Partition:
     DOWNLOADS = {
         "aqua": {"filename" : "AQUA_MODIS", "quicklook": "MODIS_AQUA_L2_SST_OBPG_QUICKLOOK", "refined": "MODIS_AQUA_L2_SST_OBPG_REFINED"},
         "terra": {"filename" : "TERRA_MODIS", "quicklook": "MODIS_TERRA_L2_SST_OBPG_QUICKLOOK", "refined": "MODIS_TERRA_L2_SST_OBPG_REFINED"},
-        "viirs": {"filename" : "SNPP_VIIRS", "quicklook": "VIIRS_L2_SST_OBPG_QUICKLOOK", "refined": "VIIRS_L2_SST_OBPG_REFINED"}
+        "viirs": {"filename" : "SNPP_VIIRS", "quicklook": "VIIRS_L2_SST_OBPG_QUICKLOOK", "refined": "VIIRS_L2_SST_OBPG_REFINED"},
+        "jpss1": {"filename" : "JPSS1_VIIRS", "quicklook": "JPSS1_L2_SST_OBPG_QUICKLOOK", "refined": "JPSS1_L2_SST_OBPG_REFINED"}
     }
     
     def __init__(self, dataset, dlc_lists, out_dir, downloads_dir, jobs_dir,

@@ -401,6 +401,8 @@ def event_handler(event, context):
             ds = "MODIS Aqua"
         elif dataset == "terra":
             ds = "MODIS Terra"
+        elif dataset == "jpss1":
+            ds = "JPSS1"
         else:
             ds = "VIIRS"
         logger.info(f"Dataset: {ds}")
