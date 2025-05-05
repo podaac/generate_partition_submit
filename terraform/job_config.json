@@ -162,6 +162,60 @@
         "share_identifier": "generateviirslicense",
         "command": [ "unique_id", "prefix", "viirs", "ptype" ]
     },
+    "downloader_jpss1_quicklook" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generatejpss1quicklook",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "JPSS1", "/data/output", "2000", "1", "no", "yes"]
+    },
+    "downloader_jpss1_refined" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generatejpss1refined",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "JPSS1", "/data/output", "2000", "1", "no", "yes"]
+    },
+    "combiner_jpss1_quicklook" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generatejpss1quicklook",
+        "command": [ "300", "300", "yes", "JPSS1", "QUICKLOOK", "-235", "input_list" ]
+    },
+    "combiner_jpss1_refined" : {
+        "cpu": "8",
+        "memory": "500",
+        "share_identifier": "generatejpss1refined",
+        "command": [ "300", "0", "yes", "JPSS1", "REFINED", "-235", "input_list" ]
+    },
+    "processor_jpss1_quicklook" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generatejpss1quicklook",
+        "command": [ "300", "yes", "JPSS1", "QUICKLOOK", "no", "-235", "input_list" ]
+    },
+    "processor_jpss1_refined" : {
+        "cpu": "8",
+        "memory": "1000",
+        "share_identifier": "generatejpss1refined",
+        "command": [ "300", "yes", "JPSS1", "REFINED", "no", "-235", "input_list" ]
+    },
+    "uploader_jpss1_quicklook" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generatejpss1quicklook",
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "jpss1", "ops" ]
+    },
+    "uploader_jpss1_refined" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generatejpss1refined",
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "jpss1", "ops" ]
+    },
+    "license_returner_jpss1" : {
+        "cpu": "1",
+        "memory": "256",
+        "share_identifier": "generatejpss1license",
+        "command": [ "unique_id", "prefix", "jpss1", "ptype" ]
+    },
     "downloader_aqua_unmatched" : {
         "cpu": "5",
         "memory": "500",
@@ -179,5 +233,11 @@
         "memory": "500",
         "share_identifier": "generateviirsunmatched",
         "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "VIIRS", "/data/output", "2000", "1", "no", "yes"]
+    },
+    "downloader_jpss1_unmatched" : {
+        "cpu": "5",
+        "memory": "500",
+        "share_identifier": "generatejpss1unmatched",
+        "command": ["/data/lists", "input_list", "-235", "L2", "SPACE", "JPSS1", "/data/output", "2000", "1", "no", "yes"]
     }
 }

@@ -5,7 +5,7 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
   role          = aws_iam_role.aws_lambda_execution_role.arn
   package_type  = "Image"
   memory_size   = 2048
-  timeout       = 600
+  timeout       = 900
   ephemeral_storage {
     size = 1024
   }
@@ -171,7 +171,8 @@ resource "aws_iam_policy" "aws_lambda_execution_policy" {
         "Resource" : [
           "${data.aws_sqs_queue.pending_jobs_aqua.arn}",
           "${data.aws_sqs_queue.pending_jobs_terra.arn}",
-          "${data.aws_sqs_queue.pending_jobs_viirs.arn}"
+          "${data.aws_sqs_queue.pending_jobs_viirs.arn}",
+          "${data.aws_sqs_queue.pending_jobs_jpss1.arn}"
         ]
       },
       {
