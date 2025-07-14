@@ -19,6 +19,11 @@ resource "aws_lambda_function" "aws_lambda_partition_submit" {
   }
 }
 
+resource "aws_lambda_function_event_invoke_config" "partition_submit_lambda_config" {
+  function_name          = aws_lambda_function.aws_lambda_partition_submit.function_name
+  maximum_retry_attempts = 0
+}
+
 # Upload job configuration file to S3 bucket
 resource "aws_s3_object" "aws_s3_bucket_job_configuration" {
   bucket                 = data.aws_s3_bucket.s3_download_lists.id
