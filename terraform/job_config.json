@@ -39,13 +39,13 @@
         "cpu": "1",
         "memory": "2048",
         "share_identifier": "generateaquaquicklook",
-        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "aqua", "ops", "false" ]
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "aqua", "ops" ]
     },
     "uploader_aqua_refined" : {
         "cpu": "1",
         "memory": "2048",
         "share_identifier": "generateaquarefined",
-        "command": [ "prefix", "-235", "/data", "input_list", "refined", "aqua", "ops", "false" ]
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "aqua", "ops" ]
     },
     "license_returner_aqua" : {
         "cpu": "1",
@@ -94,13 +94,13 @@
         "cpu": "1",
         "memory": "2048",
         "share_identifier": "generateterraquicklook",
-        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "terra", "ops", "false" ]
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "terra", "ops" ]
     },
     "uploader_terra_refined" : {
         "cpu": "1",
         "memory": "2048",
         "share_identifier": "generateterrarefined",
-        "command": [ "prefix", "-235", "/data", "input_list", "refined", "terra", "ops", "false" ]
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "terra", "ops" ]
     },
     "license_returner_terra" : {
         "cpu": "1",
@@ -148,13 +148,13 @@
         "cpu": "1",
         "memory": "2048",
         "share_identifier": "generateviirsquicklook",
-        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "viirs", "ops", "false" ]
+        "command": [ "prefix", "-235", "/data", "input_list", "quicklook", "viirs", "ops" ]
     },
     "uploader_viirs_refined" : {
         "cpu": "1",
         "memory": "2048",
         "share_identifier": "generateviirsrefined",
-        "command": [ "prefix", "-235", "/data", "input_list", "refined", "viirs", "ops", "false" ]
+        "command": [ "prefix", "-235", "/data", "input_list", "refined", "viirs", "ops" ]
     },
     "license_returner_viirs" : {
         "cpu": "1",
