@@ -37,7 +37,7 @@ data "aws_kms_key" "aws_s3" {
 }
 
 data "aws_s3_bucket" "s3_download_lists" {
-  bucket = "${var.prefix}"
+  bucket = var.prefix
 }
 
 data "aws_security_groups" "vpc_default_sg" {
@@ -69,6 +69,10 @@ data "aws_sqs_queue" "pending_jobs_terra" {
 
 data "aws_sqs_queue" "pending_jobs_viirs" {
   name = "${var.prefix}-pending-jobs-viirs.fifo"
+}
+
+data "aws_sqs_queue" "pending_jobs_jpss1" {
+  name = "${var.prefix}-pending-jobs-jpss1.fifo"
 }
 
 data "aws_subnet" "private_application_subnet" {
